@@ -8,8 +8,8 @@ import neat
 import gym
 from pureples.shared.visualize import draw_net
 from pureples.shared.substrate import Substrate
-from pureples.shared.gym_runner import run_es
-from pureples.es_hyperneat.es_hyperneat import ESNetwork
+from pureples.shared.gym_runner import run_es_rnn
+from pureples.es_hyperneat_rnn.es_hyperneat_rnn import ESNetworkRNN
 
 # S, M or L; Small, Medium or Large (logic implemented as "Not 'S' or 'M' then Large").
 VERSION = "S"
@@ -53,8 +53,8 @@ def run(gens, env, version):
     Run the pole balancing task using the Gym environment
     Returns the winning genome and the statistics of the run.
     """
-    winner, stats = run_es(
-        gens, env, 200, CONFIG, params(version), SUBSTRATE, max_trials=0
+    winner, stats = run_es_rnn(
+        gens, env, 200, CONFIG, params(version), SUBSTRATE, max_trials=0, processes=6
     )
     print(f"es_hyperneat_mountain_car_{VERSION_TEXT} done")
     return winner, stats
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     # Save CPPN if wished reused and draw it + winner to file.
     CPPN = neat.nn.FeedForwardNetwork.create(WINNER, CONFIG)
-    NETWORK = ESNetwork(SUBSTRATE, CPPN, params(VERSION))
+    NETWORK = ESNetworkRNN(SUBSTRATE, CPPN, params(VERSION))
     NET = NETWORK.create_phenotype_network(
         filename=f"es_hyperneat_mountain_car_{VERSION_TEXT}_winner"
     )

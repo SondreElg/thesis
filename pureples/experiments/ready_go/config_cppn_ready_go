@@ -1,9 +1,9 @@
-#--- parameters for the CPPN regarding the mountain car experiment  ---#
+#--- parameters for the CPPN regarding the single pole balancing experiment  ---#
 
 [NEAT]
 fitness_criterion     = max
-fitness_threshold     = -110
-pop_size              = 600
+fitness_threshold     = 100
+pop_size              = 100
 reset_on_extinction   = False
 
 [DefaultGenome]
@@ -74,8 +74,8 @@ compatibility_threshold = 3.0
 [DefaultStagnation]
 species_fitness_func = max
 max_stagnation       = 20
-species_elitism      = 10
+species_elitism      = 5
 
 [DefaultReproduction]
-elitism            = 10
+elitism            = 5
 survival_threshold = 0.2

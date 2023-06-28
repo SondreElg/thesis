@@ -1,5 +1,5 @@
 """
-All logic concerning ES-HyperNEAT resides here.
+All logic concerning ES-HyperNEAT-CTRNN resides here.
 """
 import copy
 import neat
@@ -8,7 +8,7 @@ from pureples.hyperneat.hyperneat import query_cppn
 from pureples.shared.visualize import draw_es
 
 
-class ESNetwork:
+class ESNetworkCTRNN:
     """
     The evolvable substrate network.
     """
@@ -31,7 +31,7 @@ class ESNetwork:
 
     def create_phenotype_network(self, filename=None):
         """
-        Create a RecurrentNetwork using the ES-HyperNEAT approach.
+        Create a Continuous-Time Recurrent Network using the ES-HyperNEAT approach.
         """
         input_coordinates = self.substrate.input_coordinates
         output_coordinates = self.substrate.output_coordinates
@@ -42,7 +42,7 @@ class ESNetwork:
         )
         hidden_idx = len(input_coordinates) + len(output_coordinates)
 
-        coordinates, indices, draw_connections, node_evals = [], [], [], []
+        coordinates, indices, draw_connections, node_evals = [], [], [], {}
         nodes = {}
 
         coordinates.extend(input_coordinates)
@@ -76,15 +76,27 @@ class ESNetwork:
 
         # Combine the indices with the connections/links;
         # forming node_evals used by the RecurrentNetwork.
+        # for node_key, inputs in iteritems(node_inputs):
         for idx, links in nodes.items():
-            node_evals.append((idx, self.activation, sum, 0.0, 1.0, links))
+            # node = genome.nodes[idx]
+            # activation_function = genome_config.activation_defs.get(node.activation)
+            aggregation_function = sum
+            node_evals[idx] = neat.ctrnn.CTRNNNodeEval(
+                1.0,
+                self.activation,
+                aggregation_function,
+                0.0,
+                1.0,
+                links,
+            )
+        # for idx, links in nodes.items():
+        #     node_evals.append((idx, self.activation, sum, 0.0, 1.0, links))
 
         # Visualize the network?
         if filename is not None:
             draw_es(coords_to_id, draw_connections, filename)
 
-        # This is actually a feedforward network.
-        return neat.nn.RecurrentNetwork(input_nodes, output_nodes, node_evals)
+        return neat.ctrnn.CTRNN(input_nodes, output_nodes, node_evals)
 
     @staticmethod
     def get_weights(p):
@@ -150,7 +162,7 @@ class ESNetwork:
 
     def pruning_extraction(self, coord, p, outgoing):
         """
-        Determines which connections to express - high variance = more connetions.
+        Determines which connections to express - high variance = more connections.
         """
         for c in p.cs:
             d_left, d_right, d_top, d_bottom = None, None, None, None
@@ -217,6 +229,14 @@ class ESNetwork:
                         and not (con.x1 == con.x2 and con.y1 == con.y2)
                     ):
                         self.connections.add(con)
+                    elif (
+                        not c.w
+                        == 0.0
+                        # and con.y1 < con.y2
+                        # and not (con.x1 == con.x2 and con.y1 == con.y2)
+                    ):
+                        con.recurrent = True
+                        self.connections.add(con)
 
     def es_hyperneat(self):
         """
@@ -263,6 +283,7 @@ class ESNetwork:
         Clean a net for dangling connections:
         Intersects paths from input nodes with paths to output.
         """
+        # print(connections)
         connected_to_inputs = set(tuple(i) for i in self.substrate.input_coordinates)
         connected_to_outputs = set(tuple(i) for i in self.substrate.output_coordinates)
         true_connections = set()
@@ -329,6 +350,7 @@ class Connection:
         self.x2 = x2
         self.y2 = y2
         self.weight = weight
+        self.recurrent = False
 
     # Below is needed for use in set.
     def __eq__(self, other):
@@ -345,12 +367,10 @@ class Connection:
         return hash((self.x1, self.y1, self.x2, self.y2, self.weight))
 
     def __str__(self):
-        return locals()
-        # return f"{self.x1} {self.y1} {self.x2} {self.y2} {self.weight}"
+        return f"{locals()}"
 
     def __repr__(self):
-        return locals()
-        # return f"{self.x1} {self.y1} {self.x2} {self.y2} {self.weight}"
+        return f"{locals()}"
 
 
 def find_pattern(cppn, coord, res=60, max_weight=5.0):

@@ -1,5 +1,5 @@
 """
-All logic concerning ES-HyperNEAT resides here.
+All logic concerning ES-HyperNEAT-RNN resides here.
 """
 import copy
 import neat
@@ -8,7 +8,7 @@ from pureples.hyperneat.hyperneat import query_cppn
 from pureples.shared.visualize import draw_es
 
 
-class ESNetwork:
+class ESNetworkRNN:
     """
     The evolvable substrate network.
     """
@@ -83,7 +83,6 @@ class ESNetwork:
         if filename is not None:
             draw_es(coords_to_id, draw_connections, filename)
 
-        # This is actually a feedforward network.
         return neat.nn.RecurrentNetwork(input_nodes, output_nodes, node_evals)
 
     @staticmethod
@@ -150,7 +149,7 @@ class ESNetwork:
 
     def pruning_extraction(self, coord, p, outgoing):
         """
-        Determines which connections to express - high variance = more connetions.
+        Determines which connections to express - high variance = more connections.
         """
         for c in p.cs:
             d_left, d_right, d_top, d_bottom = None, None, None, None
@@ -217,6 +216,14 @@ class ESNetwork:
                         and not (con.x1 == con.x2 and con.y1 == con.y2)
                     ):
                         self.connections.add(con)
+                    elif (
+                        not c.w
+                        == 0.0
+                        # and con.y1 < con.y2
+                        # and not (con.x1 == con.x2 and con.y1 == con.y2)
+                    ):
+                        con.recurrent = True
+                        self.connections.add(con)
 
     def es_hyperneat(self):
         """
@@ -263,6 +270,7 @@ class ESNetwork:
         Clean a net for dangling connections:
         Intersects paths from input nodes with paths to output.
         """
+        # print(connections)
         connected_to_inputs = set(tuple(i) for i in self.substrate.input_coordinates)
         connected_to_outputs = set(tuple(i) for i in self.substrate.output_coordinates)
         true_connections = set()
@@ -329,6 +337,7 @@ class Connection:
         self.x2 = x2
         self.y2 = y2
         self.weight = weight
+        self.recurrent = False
 
     # Below is needed for use in set.
     def __eq__(self, other):
@@ -345,12 +354,10 @@ class Connection:
         return hash((self.x1, self.y1, self.x2, self.y2, self.weight))
 
     def __str__(self):
-        return locals()
-        # return f"{self.x1} {self.y1} {self.x2} {self.y2} {self.weight}"
+        return f"{locals()}"
 
     def __repr__(self):
-        return locals()
-        # return f"{self.x1} {self.y1} {self.x2} {self.y2} {self.weight}"
+        return f"{locals()}"
 
 
 def find_pattern(cppn, coord, res=60, max_weight=5.0):

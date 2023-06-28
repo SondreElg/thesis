@@ -1,5 +1,5 @@
 """
-All logic concerning ES-HyperNEAT resides here.
+All logic concerning ES-HyperNEAT-RNN resides here.
 """
 import copy
 import neat
@@ -7,11 +7,21 @@ import numpy as np
 from pureples.hyperneat.hyperneat import query_cppn
 from pureples.shared.visualize import draw_es
 
+# from brian2 import *
 
-class ESNetwork:
+
+class ESNetworkSNN:
     """
     The evolvable substrate network.
     """
+
+    # tau = 10 * ms
+    # eqs = """
+    # dv/dt = (1-v)/tau : 1
+    # """
+
+    # G = NeuronGroup(1, eqs)
+    # run(100 * ms)
 
     def __init__(self, substrate, cppn, params):
         self.substrate = substrate
@@ -23,6 +33,7 @@ class ESNetwork:
         self.iteration_level = params["iteration_level"]
         self.division_threshold = params["division_threshold"]
         self.max_weight = params["max_weight"]
+        self.neurons = set()
         self.connections = set()
         # Number of layers in the network.
         self.activations = 2 ** params["max_depth"] + 1
@@ -150,8 +161,10 @@ class ESNetwork:
 
     def pruning_extraction(self, coord, p, outgoing):
         """
-        Determines which connections to express - high variance = more connetions.
+        Determines which connections to express - high variance = more connections.
         """
+        print(p)
+        print(f"{len(p.cs)=}")
         for c in p.cs:
             d_left, d_right, d_top, d_bottom = None, None, None, None
 
@@ -212,9 +225,10 @@ class ESNetwork:
                     # Nodes will only connect upwards.
                     # If connections to same layer is wanted, change to con.y1 <= con.y2.
                     if (
-                        not c.w == 0.0
-                        and con.y1 < con.y2
-                        and not (con.x1 == con.x2 and con.y1 == con.y2)
+                        not c.w
+                        == 0.0
+                        # and con.y1 < con.y2
+                        # and not (con.x1 == con.x2 and con.y1 == con.y2)
                     ):
                         self.connections.add(con)
 
@@ -263,6 +277,7 @@ class ESNetwork:
         Clean a net for dangling connections:
         Intersects paths from input nodes with paths to output.
         """
+        # print(connections)
         connected_to_inputs = set(tuple(i) for i in self.substrate.input_coordinates)
         connected_to_outputs = set(tuple(i) for i in self.substrate.output_coordinates)
         true_connections = set()
@@ -345,12 +360,10 @@ class Connection:
         return hash((self.x1, self.y1, self.x2, self.y2, self.weight))
 
     def __str__(self):
-        return locals()
-        # return f"{self.x1} {self.y1} {self.x2} {self.y2} {self.weight}"
+        return f"{locals()}"
 
     def __repr__(self):
-        return locals()
-        # return f"{self.x1} {self.y1} {self.x2} {self.y2} {self.weight}"
+        return f"{locals()}"
 
 
 def find_pattern(cppn, coord, res=60, max_weight=5.0):

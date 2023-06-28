@@ -4,11 +4,15 @@ Generic runner for AI Gym - runs Neat, Hyperneat and ES-Hyperneat
 
 import neat
 import numpy as np
-import multiprocessing
 from pureples.hyperneat.hyperneat import create_phenotype_network
 from pureples.es_hyperneat.es_hyperneat import ESNetwork
 from pureples.es_hyperneat_rnn.es_hyperneat_rnn import ESNetworkRNN
-from pureples.shared.concurrent_neat_population import Population
+
+_env = None
+_max_steps = 0
+_params = None
+_substrate = None
+_trials = 1
 
 
 def ini_pop(state, stats, config, output):
@@ -22,104 +26,81 @@ def ini_pop(state, stats, config, output):
     return pop
 
 
-def conc_ini_pop(state, stats, config, output):
-    """
-    Initialize population attaching statistics reporter.
-    """
-    pop = Population(config, state)
-    if output:
-        pop.add_reporter(neat.reporting.StdOutReporter(True))
-    pop.add_reporter(stats)
-    return pop
-
-
-def run_es_snn():
-    return
-
-
-def _eval_fitness(genome, config):
+def eval_fitness(genome, config):
+    print("\nHello")
+    print(genome)
     cppn = neat.nn.FeedForwardNetwork.create(genome, config)
-    network = ESNetworkRNN(config.substrate, cppn, config.params)
+    network = ESNetworkRNN(_substrate, cppn, _params)
     net = network.create_phenotype_network()
 
     fitnesses = []
-    for _ in range(config.trials):
-        ob = config.env.reset()[0].tolist()
+    trial = 1
+    print("WAS HERE")
+    for _ in range(_trials):
+        print(f"{trial=}")
+        trial += 1
+        ob = _env.reset()
         net.reset()
 
         total_reward = 0
 
-        for _ in range(config.max_steps):
+        for _ in range(_max_steps):
             for _ in range(network.activations):
                 o = net.activate(ob)
 
             action = np.argmax(o)
-            ob, reward, done, _ = [*(config.env.step(action))][:-1]
+            ob, reward, done, _ = _env.step(action)
             total_reward += reward
             if done:
                 break
+
         fitnesses.append(total_reward)
 
-    # genome fitness
-    return np.array(fitnesses).mean()
+    genome.fitness = np.array(fitnesses).mean()
+
+    return genome
 
 
 def run_es_rnn(
-    gens,
-    env,
-    max_steps,
-    config,
-    params,
-    substrate,
-    max_trials=100,
-    output=True,
-    processes=1,
+    gens, env, max_steps, config, params, substrate, max_trials=100, output=True
 ):
     """
     Generic OpenAI Gym runner for ES-HyperNEAT-RNN.
     """
-    trials = 1
+    global _env
+    global _max_steps
+    global _params
+    global _substrate
+    global _trials
 
-    def eval_fitness(genomes, config):
-        for _, g in genomes:
-            g.fitness = _eval_fitness(genomes, config)
-
-    setattr(config, "env", env)
-    setattr(config, "max_steps", max_steps)
-    setattr(config, "params", params)
-    setattr(config, "substrate", substrate)
-    setattr(config, "trials", trials)
+    _env = env
+    _max_steps = max_steps
+    _trials = 1
+    _params = params
+    _substrate = substrate
 
     # Create population and train the network. Return winner of network running 100 episodes.
     stats_one = neat.statistics.StatisticsReporter()
     pop = ini_pop(None, stats_one, config, output)
-    pe = neat.ParallelEvaluator(multiprocessing.cpu_count(), _eval_fitness)
-    pop.run(pe.evaluate, gens)
+    pop.run(eval_fitness, gens)
 
     stats_ten = neat.statistics.StatisticsReporter()
     pop = ini_pop((pop.population, pop.species, 0), stats_ten, config, output)
-    trials = 10
-    winner_ten = pop.run(pe.evaluate, gens)
+    _trials = 10
+    winner_ten = pop.run(eval_fitness, gens)
 
     if max_trials == 0:
         return winner_ten, (stats_one, stats_ten)
 
     stats_hundred = neat.statistics.StatisticsReporter()
     pop = ini_pop((pop.population, pop.species, 0), stats_hundred, config, output)
-    trials = max_trials
-    winner_hundred = pop.run(pe.evaluate, gens)
+    _trials = max_trials
+    winner_hundred = pop.run(eval_fitness, gens)
     return winner_hundred, (stats_one, stats_ten, stats_hundred)
 
 
 def run_es(
-    gens,
-    env,
-    max_steps,
-    config,
-    params,
-    substrate,
-    max_trials=100,
-    output=True,
+    gens, env, max_steps, config, params, substrate, max_trials=100, output=True
 ):
     """
     Generic OpenAI Gym runner for ES-HyperNEAT.
@@ -135,7 +116,7 @@ def run_es(
             fitnesses = []
 
             for _ in range(trials):
-                ob = env.reset()[0].tolist()
+                ob = env.reset()
                 net.reset()
 
                 total_reward = 0
@@ -145,7 +126,7 @@ def run_es(
                         o = net.activate(ob)
 
                     action = np.argmax(o)
-                    ob, reward, done, _ = [*(env.step(action))][:-1]
+                    ob, reward, done, _ = env.step(action)
                     total_reward += reward
                     if done:
                         break

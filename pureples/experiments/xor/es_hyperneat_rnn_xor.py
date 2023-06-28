@@ -9,7 +9,7 @@ import neat
 import neat.nn
 from pureples.shared.substrate import Substrate
 from pureples.shared.visualize import draw_net
-from pureples.es_hyperneat.es_hyperneat import ESNetwork
+from pureples.es_hyperneat_rnn.es_hyperneat_rnn import ESNetworkRNN
 
 # S, M or L; Small, Medium or Large (logic implemented as "Not 'S' or 'M' then Large").
 VERSION = "S"
@@ -32,7 +32,7 @@ def params(version):
     return {
         "initial_depth": 0 if version == "S" else 1 if version == "M" else 2,
         "max_depth": 1 if version == "S" else 2 if version == "M" else 3,
-        "variance_threshold": 0.03,
+        "variance_threshold": 0.2,
         "band_threshold": 0.3,
         "iteration_level": 1,
         "division_threshold": 0.5,
@@ -60,7 +60,7 @@ def eval_fitness(genomes, config):
     """
     for _, genome in genomes:
         cppn = neat.nn.FeedForwardNetwork.create(genome, config)
-        network = ESNetwork(SUBSTRATE, cppn, DYNAMIC_PARAMS)
+        network = ESNetworkRNN(SUBSTRATE, cppn, DYNAMIC_PARAMS)
         net = network.create_phenotype_network()
 
         sum_square_error = 0.0
@@ -91,7 +91,7 @@ def run(gens, version):
     DYNAMIC_PARAMS = params(version)
 
     winner = pop.run(eval_fitness, gens)
-    print(f"es_hyperneat_xor_{VERSION_TEXT} done")
+    print(f"es_hyperneat_rnn_xor_{VERSION_TEXT} done")
     return winner, stats
 
 
@@ -103,10 +103,10 @@ if __name__ == "__main__":
     # Verify network output against training data.
     print("\nOutput:")
     CPPN = neat.nn.FeedForwardNetwork.create(WINNER, CONFIG)
-    NETWORK = ESNetwork(SUBSTRATE, CPPN, DYNAMIC_PARAMS)
+    NETWORK = ESNetworkRNN(SUBSTRATE, CPPN, DYNAMIC_PARAMS)
     # This will also draw winner_net.
     WINNER_NET = NETWORK.create_phenotype_network(
-        filename=f"pureples/experiments/xor/results/es_hyperneat_xor_{VERSION_TEXT}_winner.png"
+        filename=f"pureples/experiments/xor/results/es_hyperneat_rnn_xor_{VERSION_TEXT}_winner.png"
     )
 
     for inputs, expected in zip(XOR_INPUTS, XOR_OUTPUTS):
@@ -125,10 +125,10 @@ if __name__ == "__main__":
     # Save CPPN if wished reused and draw it to file.
     draw_net(
         CPPN,
-        filename=f"pureples/experiments/xor/results/es_hyperneat_xor_{VERSION_TEXT}_cppn",
+        filename=f"pureples/experiments/xor/results/es_hyperneat_rnn_xor_{VERSION_TEXT}_cppn",
     )
     with open(
-        f"pureples/experiments/xor/results/es_hyperneat_xor_{VERSION_TEXT}_cppn.pkl",
+        f"pureples/experiments/xor/results/es_hyperneat_rnn_xor_{VERSION_TEXT}_cppn.pkl",
         "wb",
     ) as output:
         pickle.dump(CPPN, output, pickle.HIGHEST_PROTOCOL)
