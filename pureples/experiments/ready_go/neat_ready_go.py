@@ -10,20 +10,13 @@ import neat
 import neat.nn
 import multiprocessing
 import numpy as np
-from pureples.shared.substrate import Substrate
 from pureples.shared.visualize import draw_net, draw_hist
-from pureples.es_hyperneat_rnn.es_hyperneat_rnn import ESNetworkRNN
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
 
 # S, M or L; Small, Medium or Large (logic implemented as "Not 'S' or 'M' then Large").
 VERSION = "M"
 VERSION_TEXT = "small" if VERSION == "S" else "medium" if VERSION == "M" else "large"
-
-# Network coordinates and the resulting substrate.
-INPUT_COORDINATES = [(0.0, -1.0)]  # [(-0.5, -1.0), (0.5, -1.0)]
-OUTPUT_COORDINATES = [(0.0, 1.0)]
-SUBSTRATE = Substrate(INPUT_COORDINATES, OUTPUT_COORDINATES)
 
 foreperiod = 25
 cycles = 500
@@ -34,32 +27,13 @@ training_setup = {
     "params": [foreperiod, cycles, time_block_size, cycle_delay_range],
 }
 
-
-def params(version):
-    """
-    ES-HyperNEAT specific parameters.
-    """
-    return {
-        "initial_depth": 0 if version == "S" else 1 if version == "M" else 2,
-        "max_depth": 1 if version == "S" else 2 if version == "M" else 3,
-        "variance_threshold": 0.2,
-        "band_threshold": 0.3,
-        "iteration_level": 3,
-        "division_threshold": 0.5,
-        "max_weight": 10.0,
-        "activation": "sigmoid",
-    }
-
-
-DYNAMIC_PARAMS = params(VERSION)
-
-# Config for CPPN.
+# Config for network
 CONFIG = neat.config.Config(
     neat.genome.DefaultGenome,
     neat.reproduction.DefaultReproduction,
     neat.species.DefaultSpeciesSet,
     neat.stagnation.DefaultStagnation,
-    "pureples/experiments/ready_go/config_cppn_ready_go",
+    "pureples/experiments/ready_go/config_neat_ready_go",
 )
 
 
@@ -109,7 +83,7 @@ def run_network(network, net, ready_go_data, verbose=False, visualize=False):
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/es_hyperneat_rnn_ready_go_{VERSION_TEXT}_outputs.png",
+                f"pureples/experiments/ready_go/results/neat_ready_go_{VERSION_TEXT}_outputs.png",
             )
             visualize = False
         verbose = False
@@ -122,12 +96,10 @@ def _eval_fitness(genome, config):
     Fitness function.
     Evaluate the fitness of a single genome.
     """
-    cppn = neat.nn.FeedForwardNetwork.create(genome, config)
-    network = ESNetworkRNN(SUBSTRATE, cppn, DYNAMIC_PARAMS)
-    net = network.create_phenotype_network()
+    network = neat.nn.RecurrentNetwork.create(genome, config)
 
     # genome fitness
-    return run_network(network, net, config.train_set)
+    return run_network(None, network, config.train_set)
 
 
 def eval_fitness(genomes, config):
@@ -159,9 +131,6 @@ def run(*, gens, version, max_trials=1):
     Returns the winning genome and the statistics of the run.
     """
 
-    global DYNAMIC_PARAMS
-    DYNAMIC_PARAMS = params(version)
-
     setattr(CONFIG, "training_setup", training_setup)
 
     # Create population and train the network. Return winner of network running 100 episodes.
@@ -182,35 +151,35 @@ def run(*, gens, version, max_trials=1):
     setattr(CONFIG, "trials", max_trials)
     stats_hundred = neat.StatisticsReporter()
     pop = ini_pop((pop.population, pop.species, 0), CONFIG, stats_hundred)
-    print(f"es_hyperneat_rnn_ready_go_{VERSION_TEXT} done")
+    print(f"neat_ready_go_{VERSION_TEXT} done")
     winner_hundred = pop.run(pe.evaluate, gens)
     return winner_hundred, (stats_one, stats_ten, stats_hundred)
 
 
 # If run as script.
 if __name__ == "__main__":
-    result = run(gens=500, version=VERSION)
+    result = run(gens=50, version=VERSION)
     WINNER = result[0][0]  # Only relevant to look at the winner.
     print("\nBest genome:\n{!s}".format(WINNER))
 
     # Verify network output against training data.
     print("\nOutput:")
-    CPPN = neat.nn.FeedForwardNetwork.create(WINNER, CONFIG)
-    NETWORK = ESNetworkRNN(SUBSTRATE, CPPN, DYNAMIC_PARAMS)
-    # This will also draw winner_net.
-    WINNER_NET = NETWORK.create_phenotype_network(
-        filename=f"pureples/experiments/ready_go/results/es_hyperneat_rnn_ready_go_{VERSION_TEXT}_winner.png"
+    NETWORK = neat.nn.RecurrentNetwork.create(WINNER, CONFIG)
+    # Add logic to draw winner_net.
+    draw_net(
+        NETWORK,
+        f"pureples/experiments/ready_go/results/neat_ready_go_{VERSION_TEXT}_winner.png",
     )
 
-    run_network(NETWORK, WINNER_NET, result[0][1], verbose=False, visualize=True)
+    run_network(None, NETWORK, result[0][1], verbose=False, visualize=True)
 
     # Save CPPN if wished reused and draw it to file.
     draw_net(
-        CPPN,
-        filename=f"pureples/experiments/ready_go/results/es_hyperneat_rnn_ready_go_{VERSION_TEXT}_cppn",
+        NETWORK,
+        filename=f"pureples/experiments/ready_go/results/neat_ready_go_{VERSION_TEXT}_network",
     )
     with open(
-        f"pureples/experiments/ready_go/results/es_hyperneat_rnn_ready_go_{VERSION_TEXT}_cppn.pkl",
+        f"pureples/experiments/ready_go/results/neat_ready_go_{VERSION_TEXT}_network.pkl",
         "wb",
     ) as output:
-        pickle.dump(CPPN, output, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(NETWORK, output, pickle.HIGHEST_PROTOCOL)

@@ -7,26 +7,22 @@ def ready_go_list(
     cycles,
     time_block_size=None,
     cycle_delay_range=[0, 1],
+    distributions=[],
+    distributions_args=[{}],
     trials=1,
-    distribution=np.random.normal,
-    distribution_args={},
 ):
     """Returns a list of inputs representing the ready-go sequence with delays between each cycle"""
-
     generation_data = []
 
     cycle_len = math.floor(foreperiod / time_block_size)
-    for _ in range(trials):
+    for i in range(trials):
         inputs = []
+        dist_index = i % len(distributions)
         for _ in range(cycles):
             cycle_spike = int(
                 max(
                     min(
-                        distribution(
-                            **distribution_args,
-                            loc=math.floor(cycle_len / 2),
-                            scale=cycle_len / 4
-                        ),
+                        distributions[dist_index](**distributions_args[dist_index]),
                         cycle_len - 1,
                     ),
                     0,

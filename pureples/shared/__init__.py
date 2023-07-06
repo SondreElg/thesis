@@ -11,3 +11,4 @@ from pureples.shared.substrate import Substrate
 from pureples.shared.concurrent_neat_population import Population
 from pureples.shared.population_plus import Population
 from pureples.shared.ready_go import ready_go_list
+from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
