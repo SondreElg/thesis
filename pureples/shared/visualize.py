@@ -37,7 +37,9 @@ def draw_net(net, filename=None, node_names={}, node_colors={}):
         dot.node(name, _attributes=node_attrs)
 
     # print(f"{net.node_evals=}")
-    for node, _, _, _, _, links, _, _ in net.node_evals:
+    for entry in net.node_evals:
+        node = entry[0]
+        links = entry[5]
         for i, w in links:
             node_input, output = node, i
             a = node_names.get(output, str(output))
@@ -159,10 +161,17 @@ def draw_hist(
     fig = plt.figure()
     temp = []
     indices = np.asarray(np.where(network_input == 1))[0]
-    split_output = np.array(np.split(network_output, indices)[3:], dtype=object)
+    temp = np.split(network_output, indices)
+    split_output = []
+    for entry in temp:
+        entry_len = len(entry)
+        if entry_len and entry_len < cycle_len:
+            split_output.append(np.pad(entry, ((0, cycle_len - entry_len))))
+
     split_output = np.array(
         [np.pad(i, ((0, cycle_len - len(i)))) for i in split_output]
     )
+    print(split_output)
 
     split_expected_output = np.array(
         np.split(expected_output, indices)[3:], dtype=object
@@ -173,9 +182,12 @@ def draw_hist(
 
     expected_avg = np.average(split_expected_output, axis=0)
     avg = np.average(split_output, axis=0)
-    print(expected_avg)
+    max_out = np.max(split_output, axis=0)
+    print(f"{expected_avg=}")
+    print(f"{avg=}")
     plt.plot(expected_avg, label="expected")
     plt.plot(avg, label="actual")
+    plt.plot(max_out, label="maximum")
     plt.legend()
     plt.show()
     # for i, v in enumerate(network_output):

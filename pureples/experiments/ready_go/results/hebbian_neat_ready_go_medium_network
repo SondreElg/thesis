@@ -3,9 +3,8 @@ digraph svg {
 	-1 [fillcolor=lightgray shape=box style=filled]
 	-2 [fillcolor=lightgray shape=box style=filled]
 	0 [fillcolor=lightblue style=filled]
-	-2 -> 291 [color=blue penwidth=0.23981640631133155 style=solid]
-	291 -> 291 [color=blue penwidth=0.3847852059763286 style=solid]
-	291 -> 0 [color=blue penwidth=0.6267477038569566 style=solid]
-	12780 -> 0 [color=blue penwidth=0.45623875180249307 style=solid]
-	0 -> 12780 [color=red penwidth=0.27083124014996096 style=solid]
+	0 -> 0 [color=red penwidth=0.2354945343546401 style=solid]
+	658 -> 0 [color=blue penwidth=0.6977889388159071 style=solid]
+	0 -> 658 [color=red penwidth=0.11978262318156567 style=solid]
+	-2 -> 658 [color=red penwidth=0.5181106877624891 style=solid]
 }

@@ -19,8 +19,8 @@ from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
 VERSION = "M"
 VERSION_TEXT = "small" if VERSION == "S" else "medium" if VERSION == "M" else "large"
 
-foreperiod = 45
-cycles = 500
+foreperiod = 25
+cycles = 2000
 time_block_size = 5
 cycle_delay_range = [0, 3]
 cycle_len = math.floor(foreperiod / time_block_size)
@@ -33,11 +33,14 @@ training_setup = {
         cycle_delay_range,
         [
             np.random.normal,
-            # np.random.triangular
+            np.random.triangular,
+            # np.random.triangular,
+            #
         ],
         [
             {"loc": math.floor(cycle_len / 2), "scale": cycle_len / 4},
-            # {"left": 0, "mode": cycle_len - 1, "right": cycle_len - 1},
+            {"left": 0, "mode": cycle_len - 1, "right": cycle_len - 1},
+            # {"left": 0, "mode": 0, "right": cycle_len - 1},
         ],
     ],
 }
@@ -93,19 +96,21 @@ def run_network(network, net, ready_go_data, verbose=False, visualize="", cycle_
             # else:
             #     last_fitness = 1 - abs(output[0]) ** 2
             # #     last_fitness = -1.0
+            outputs.append(*output)
             if not training_over and ready and index >= len(inputs) // 2:
                 training_over = True
             if training_over:
-                outputs.append(*output)
                 if last_fitness != -1.0:
                     fitness.append(last_fitness)
+            # if expected_output[0] < 0.1:
+            #     last_fitness = 0.0
 
-            # if verbose:
-            #     print(
-            #         " input {!r}, expected output {:.3f}, got {!r}".format(
-            #             input, expected_output[index], output
-            #         )
-            #     )
+            if verbose and training_over:
+                print(
+                    " input {!r}, expected output {:.3f}, got {!r}".format(
+                        input, expected_output[index], output
+                    )
+                )
         if fitness:
             trial_fitness.append(np.mean(fitness))
         else:
@@ -119,7 +124,6 @@ def run_network(network, net, ready_go_data, verbose=False, visualize="", cycle_
                 np.array(expected_output),
                 f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_{VERSION_TEXT}_{visualize}_outputs.png",
             )
-            visualize = ""
         verbose = False
         total_entries += len(inputs)
         if print_fitness:
@@ -177,30 +181,30 @@ def run(*, gens, version, max_trials=1, initial_pop=None):
     setattr(CONFIG, "trials", distributions)
     stats_one = neat.StatisticsReporter()
     pop = ini_pop(initial_pop, CONFIG, stats_one)
-    pe = neat.ParallelEvaluator(multiprocessing.cpu_count(), _eval_fitness)
-    pop.run(pe.evaluate, gens)
+    pe = neat.ParallelEvaluator(multiprocessing.cpu_count() - 1, _eval_fitness)
+    winner_one = pop.run(pe.evaluate, gens)
 
-    print("Second run")
-    setattr(CONFIG, "trials", distributions)
-    stats_ten = neat.StatisticsReporter()
-    pop = ini_pop((pop.population, pop.species, 0), CONFIG, stats_ten)
-    winner_ten = pop.run(pe.evaluate, gens)
+    # print("Second run")
+    # setattr(CONFIG, "trials", distributions)
+    # stats_ten = neat.StatisticsReporter()
+    # pop = ini_pop((pop.population, pop.species, 0), CONFIG, stats_ten)
+    # winner_ten = pop.run(pe.evaluate, gens)
 
-    if max_trials == 0:
-        return winner_ten, (stats_one, stats_ten)
+    # if max_trials == 0:
+    #     return winner_ten, (stats_one, stats_ten)
 
-    print("Third run")
-    setattr(CONFIG, "trials", max_trials * distributions)
-    stats_hundred = neat.StatisticsReporter()
-    pop = ini_pop((pop.population, pop.species, 0), CONFIG, stats_hundred)
-    print(f"hebbian_neat_ready_go_{VERSION_TEXT} done")
-    winner_hundred = pop.run(pe.evaluate, gens)
-    return winner_hundred, (stats_one, stats_ten, stats_hundred)
+    # print("Third run")
+    # setattr(CONFIG, "trials", max_trials * distributions)
+    # stats_hundred = neat.StatisticsReporter()
+    # pop = ini_pop((pop.population, pop.species, 0), CONFIG, stats_hundred)
+    # print(f"hebbian_neat_ready_go_{VERSION_TEXT} done")
+    # winner_hundred = pop.run(pe.evaluate, gens)
+    return winner_one, (stats_one)  # , stats_ten, stats_hundred)
 
 
 # If run as script.
 if __name__ == "__main__":
-    result = run(gens=50, version=VERSION)
+    result = run(gens=100, version=VERSION)
     WINNER = result[0][0]  # Only relevant to look at the winner.
     print("\nBest genome:\n{!s}".format(WINNER))
 
@@ -248,7 +252,7 @@ if __name__ == "__main__":
         None,
         NETWORK,
         result[0][1],
-        verbose=False,
+        verbose=True,
         visualize=f"{VERSION_TEXT}_all",
         cycle_len=max_cycle_len,  # Assume cycle_len is same/larger for last dist
     )
@@ -268,5 +272,13 @@ if __name__ == "__main__":
 # Visualize comparison of output between distributions
 # Complete STPD implementation
 ## Ensure weights are updated correctly according to algorithm
-## Assure learning hyperparameters are good (learning rate, firing threshold, max weight)
+## Ensure learning hyperparameters are good (learning rate, firing threshold, max weight)
 # Attempt to evolve islands of NEAT populations fit for different algorithms, then combine the islands
+# Improve visualization
+## Visualize a final cycle without a go-input
+## Visualize Hebbian over time
+## Visualize the ouput of ALL neurons for trials with go at start, middle, and end
+# More distributions
+## Bimodal
+# Hebbian
+## Try to batch update hebbian after each trial
