@@ -6,7 +6,7 @@ from pureples.shared.gym_runner import (
     run_hyper,
     run_neat,
 )
-from pureples.shared.visualize import draw_net, draw_pattern, draw_es
+from pureples.shared.visualize import draw_net, draw_pattern, draw_es, draw_hebbian
 from pureples.shared.substrate import Substrate
 from pureples.shared.concurrent_neat_population import Population
 from pureples.shared.population_plus import Population

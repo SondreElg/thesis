@@ -10,7 +10,7 @@ import neat
 import neat.nn
 import multiprocessing
 import numpy as np
-from pureples.shared.visualize import draw_net, draw_hist
+from pureples.shared.visualize import draw_net, draw_hist, draw_hebbian
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
@@ -20,7 +20,7 @@ VERSION = "M"
 VERSION_TEXT = "small" if VERSION == "S" else "medium" if VERSION == "M" else "large"
 
 foreperiod = 25
-cycles = 2000
+cycles = 200
 time_block_size = 5
 cycle_delay_range = [0, 3]
 cycle_len = math.floor(foreperiod / time_block_size)
@@ -66,36 +66,18 @@ def run_network(network, net, ready_go_data, verbose=False, visualize="", cycle_
         fitness = []
         steady = False
         training_over = False
+        hebbian_factors = []
         net.reset()
         for index, input in enumerate(inputs):
             ready = int(input == 1)
             go = int(input == 2)
             steady = (steady or ready) and not go
 
-            # if ready:
-            #     predicted = False
-            # elif state == 2:
-            #     predicted = True
-
-            # Why does it activate multiple times?
-            # Does the recurrent network implementation progress one "layer" at a time?
-            # for _ in range(network.activations):
             # Do we really even need the Go signal?
             output = net.activate([ready, go], last_fitness)
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
 
-            # if expected_output[index] > 0.2 and (steady or go):  # and output[0] > 0.1:
-            #     last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
-            # elif (
-            #     not steady and not go
-            # ):  # Doesn't take into account more go signals might come
-            #     last_fitness = 1 - abs(output[0]) ** 2
-            # # elif output[0] > 0.2:
-            # #     last_fitness = -(abs(output[0] - expected_output[index]) ** 2)
-            # else:
-            #     last_fitness = 1 - abs(output[0]) ** 2
-            # #     last_fitness = -1.0
             outputs.append(*output)
             if not training_over and ready and index >= len(inputs) // 2:
                 training_over = True
@@ -123,6 +105,10 @@ def run_network(network, net, ready_go_data, verbose=False, visualize="", cycle_
                 np.array(outputs),
                 np.array(expected_output),
                 f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_{VERSION_TEXT}_{visualize}_outputs.png",
+            )
+            draw_hebbian(
+                net.hebbian_update_log,
+                f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_{VERSION_TEXT}_{visualize}_hebbian.png",
             )
         verbose = False
         total_entries += len(inputs)
@@ -181,7 +167,7 @@ def run(*, gens, version, max_trials=1, initial_pop=None):
     setattr(CONFIG, "trials", distributions)
     stats_one = neat.StatisticsReporter()
     pop = ini_pop(initial_pop, CONFIG, stats_one)
-    pe = neat.ParallelEvaluator(multiprocessing.cpu_count() - 1, _eval_fitness)
+    pe = neat.ParallelEvaluator(multiprocessing.cpu_count() - 2, _eval_fitness)
     winner_one = pop.run(pe.evaluate, gens)
 
     # print("Second run")
@@ -219,34 +205,34 @@ if __name__ == "__main__":
         + training_setup["params"][3][1]
     )
 
-    if distributions > 1:
-        for i in range(distributions):
-            single_dist_setup = {
-                "function": training_setup["function"],
-                "params": [
-                    *training_setup["params"][:4],
-                    [training_setup["params"][4][i]],
-                    [training_setup["params"][5][i]],
-                ],
-            }
-            cycle_len = (
-                math.floor(
-                    single_dist_setup["params"][0] / single_dist_setup["params"][2]
-                )
-                + single_dist_setup["params"][3][1]
-            )
-            max_cycle_len = max(max_cycle_len, cycle_len)
-            setattr(CONFIG, "training_setup", single_dist_setup)
-            NETWORK = HebbianRecurrentNetwork.create(WINNER, CONFIG)
-            data = single_dist_setup["function"](*single_dist_setup["params"])
-            run_network(
-                None,
-                NETWORK,
-                data,
-                verbose=True,
-                visualize=f"{VERSION_TEXT}_dist{i+1}",
-                cycle_len=cycle_len,
-            )
+    # if distributions > 1:
+    #     for i in range(distributions):
+    #         single_dist_setup = {
+    #             "function": training_setup["function"],
+    #             "params": [
+    #                 *training_setup["params"][:4],
+    #                 [training_setup["params"][4][i]],
+    #                 [training_setup["params"][5][i]],
+    #             ],
+    #         }
+    #         cycle_len = (
+    #             math.floor(
+    #                 single_dist_setup["params"][0] / single_dist_setup["params"][2]
+    #             )
+    #             + single_dist_setup["params"][3][1]
+    #         )
+    #         max_cycle_len = max(max_cycle_len, cycle_len)
+    #         setattr(CONFIG, "training_setup", single_dist_setup)
+    #         NETWORK = HebbianRecurrentNetwork.create(WINNER, CONFIG)
+    #         data = single_dist_setup["function"](*single_dist_setup["params"])
+    #         run_network(
+    #             None,
+    #             NETWORK,
+    #             data,
+    #             verbose=True,
+    #             visualize=f"{VERSION_TEXT}_dist{i+1}",
+    #             cycle_len=cycle_len,
+    #         )
 
     run_network(
         None,

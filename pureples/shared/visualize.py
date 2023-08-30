@@ -151,6 +151,23 @@ def draw_es(id_to_coords, connections, filename):
     fig.savefig(filename, dpi=300)
 
 
+def draw_hebbian(
+    hebbian,
+    filename,
+):
+    fig = plt.figure()
+    print(hebbian)
+    for i in range(len(hebbian[0])):
+        print(hebbian[0][i])
+        print(hebbian[0][i].keys())
+        ids = list(hebbian[0][i].keys())
+        for id in ids:
+            plt.plot([entry[i][id] for entry in hebbian], label=f"{i}-{id}")
+    plt.legend()
+    plt.show()
+    fig.savefig(filename, dpi=300)
+
+
 def draw_hist(
     cycle_len,
     network_input,
@@ -171,7 +188,7 @@ def draw_hist(
     split_output = np.array(
         [np.pad(i, ((0, cycle_len - len(i)))) for i in split_output]
     )
-    print(split_output)
+    # print(split_output)
 
     split_expected_output = np.array(
         np.split(expected_output, indices)[3:], dtype=object
