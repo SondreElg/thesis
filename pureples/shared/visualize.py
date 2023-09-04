@@ -156,10 +156,10 @@ def draw_hebbian(
     filename,
 ):
     fig = plt.figure()
-    print(hebbian)
+    # print(hebbian)
     for i in range(len(hebbian[0])):
-        print(hebbian[0][i])
-        print(hebbian[0][i].keys())
+        # print(hebbian[0][i])
+        # print(hebbian[0][i].keys())
         ids = list(hebbian[0][i].keys())
         for id in ids:
             plt.plot([entry[i][id] for entry in hebbian], label=f"{i}-{id}")
@@ -200,8 +200,8 @@ def draw_hist(
     expected_avg = np.average(split_expected_output, axis=0)
     avg = np.average(split_output, axis=0)
     max_out = np.max(split_output, axis=0)
-    print(f"{expected_avg=}")
-    print(f"{avg=}")
+    # print(f"{expected_avg=}")
+    # print(f"{avg=}")
     plt.plot(expected_avg, label="expected")
     plt.plot(avg, label="actual")
     plt.plot(max_out, label="maximum")
