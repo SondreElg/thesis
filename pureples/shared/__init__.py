@@ -13,3 +13,4 @@ from pureples.shared.population_plus import Population
 from pureples.shared.ready_go import ready_go_list, ready_go_list_zip
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
 from pureples.shared.no_direct_rnn import RecurrentNetwork
+from pureples.shared.distributions import bimodal

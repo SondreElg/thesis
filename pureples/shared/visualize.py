@@ -191,15 +191,17 @@ def draw_hist(
     # print(split_output)
 
     split_expected_output = np.array(
-        np.split(expected_output, indices)[3:], dtype=object
+        np.split(expected_output, indices)[:-4], dtype=object
     )
+    print(split_expected_output)
     split_expected_output = np.array(
         [np.pad(i, ((0, cycle_len - len(i)))) for i in split_expected_output]
     )
-
-    expected_avg = np.average(split_expected_output, axis=0)
-    avg = np.average(split_output, axis=0)
-    max_out = np.max(split_output, axis=0)
+    expected_avg = np.average(
+        split_expected_output[len(split_output) // 2 : -4], axis=0
+    )
+    avg = np.average(split_output[len(split_output) // 2 : -4], axis=0)
+    max_out = np.max(split_output[len(split_output) // 2 : -4], axis=0)
     # print(f"{expected_avg=}")
     # print(f"{avg=}")
     plt.plot(expected_avg, label="expected")
@@ -220,4 +222,33 @@ def draw_hist(
     #     color="r",
     # )
     fig.savefig(filename, dpi=300)
+    end_test_set = np.swapaxes(split_output[-4:], 0, 1)
+    fig2 = plt.figure()
+    unlabeled = plt.plot(end_test_set)
+    plt.legend(unlabeled, ("first", "middle", "end", "none"))
+    plt.plot(expected_avg, label="expected")
+    plt.show()
+    fig.savefig(filename.split(".")[0] + "_end_tests.png", dpi=300)
     return
+
+
+def draw_tests(
+    cycle_len,
+    network_input,
+    network_output,
+    expected_output,
+    filename,
+):
+    fig = plt.figure()
+    temp = []
+    indices = np.asarray(np.where(network_input == 1))[0]
+    temp = np.split(network_output, indices)
+    split_output = []
+    for entry in temp:
+        entry_len = len(entry)
+        if entry_len and entry_len < cycle_len:
+            split_output.append(np.pad(entry, ((0, cycle_len - entry_len))))
+
+    split_output = np.array(
+        [np.pad(i, ((0, cycle_len - len(i)))) for i in split_output]
+    )

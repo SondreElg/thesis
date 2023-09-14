@@ -14,13 +14,14 @@ from pureples.shared.visualize import draw_net, draw_hist, draw_hebbian
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
+from pureples.shared.distributions import bimodal
 
 # S, M or L; Small, Medium or Large (logic implemented as "Not 'S' or 'M' then Large").
 VERSION = "M"
 VERSION_TEXT = "small" if VERSION == "S" else "medium" if VERSION == "M" else "large"
 
-foreperiod = 25
-cycles = 500
+foreperiod = 35
+cycles = 800
 time_block_size = 5
 cycle_delay_range = [0, 3]
 cycle_len = math.floor(foreperiod / time_block_size)
@@ -35,11 +36,17 @@ training_setup = {
             np.random.normal,
             np.random.triangular,
             np.random.triangular,
+            bimodal,
+            #
         ],
         [
             {"loc": math.floor(cycle_len / 2), "scale": cycle_len / 4},
             {"left": 0, "mode": cycle_len - 1, "right": cycle_len - 1},
             {"left": 0, "mode": 0, "right": cycle_len - 1},
+            {
+                "loc": [math.floor(cycle_len / 4), math.floor(cycle_len * 3 / 4)],
+                "scale": [cycle_len / 8, cycle_len / 8],
+            },
         ],
     ],
 }
@@ -60,7 +67,10 @@ def run_network(network, net, ready_go_data, verbose=False, visualize="", cycle_
     print_fitness = verbose
     trial_fitness = []
 
+    trial = 0
+
     for inputs, expected_output in ready_go_data:
+        trial += 1
         last_fitness = 0.0
         fitness = []
         steady = False
@@ -73,7 +83,7 @@ def run_network(network, net, ready_go_data, verbose=False, visualize="", cycle_
             steady = (steady or ready) and not go
 
             # Do we really even need the Go signal?
-            output = net.activate([ready, go, last_fitness], None)
+            output = net.activate([ready, go], last_fitness)
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
 
@@ -103,11 +113,11 @@ def run_network(network, net, ready_go_data, verbose=False, visualize="", cycle_
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_{VERSION_TEXT}_{visualize}_outputs.png",
+                f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_{VERSION_TEXT}_{visualize}_{trial}_outputs.png",
             )
             draw_hebbian(
                 net.hebbian_update_log,
-                f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_{VERSION_TEXT}_{visualize}_hebbian.png",
+                f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_{VERSION_TEXT}_{visualize}_{trial}_hebbian.png",
             )
         verbose = False
         total_entries += len(inputs)
@@ -189,7 +199,7 @@ def run(*, gens, version, max_trials=1, initial_pop=None):
 
 # If run as script.
 if __name__ == "__main__":
-    result = run(gens=1000, version=VERSION)
+    result = run(gens=200, version=VERSION)
     WINNER = result[0][0]  # Only relevant to look at the winner.
     print("\nBest genome:\n{!s}".format(WINNER))
 
@@ -199,10 +209,7 @@ if __name__ == "__main__":
 
     distributions = len(training_setup["params"][4])
 
-    max_cycle_len = (
-        math.floor(training_setup["params"][0] / training_setup["params"][2])
-        + training_setup["params"][3][1]
-    )
+    max_trial_len = cycle_len + cycle_delay_range[1]
 
     # if distributions > 1:
     #     for i in range(distributions):
@@ -220,7 +227,7 @@ if __name__ == "__main__":
     #             )
     #             + single_dist_setup["params"][3][1]
     #         )
-    #         max_cycle_len = max(max_cycle_len, cycle_len)
+    #         max_trial_len = max(max_trial_len, cycle_len)
     #         setattr(CONFIG, "training_setup", single_dist_setup)
     #         NETWORK = HebbianRecurrentNetwork.create(WINNER, CONFIG)
     #         data = single_dist_setup["function"](*single_dist_setup["params"])
@@ -233,13 +240,26 @@ if __name__ == "__main__":
     #             cycle_len=cycle_len,
     #         )
 
+    test_set_expanded = result[0][1]
+    for i in [0, cycle_len // 2, cycle_len - 1, -1]:
+        for j in range(len(result[0][1])):
+            test_set_expanded[j][0].append(1)
+            test_set_expanded[j][1].append(0)
+            for k in range(max_trial_len - 1):
+                if i == k:
+                    test_set_expanded[j][0].append(2)
+                    test_set_expanded[j][1].append(1)
+                else:
+                    test_set_expanded[j][0].append(0)
+                    test_set_expanded[j][1].append(0)
+
     run_network(
         None,
         NETWORK,
-        result[0][1],
+        test_set_expanded,
         verbose=False,
         visualize=f"{VERSION_TEXT}_all",
-        cycle_len=max_cycle_len,  # Assume cycle_len is same/larger for last dist
+        cycle_len=max_trial_len,  # Assume cycle_len is same/larger for last dist
     )
 
     # Save network if wished reused and draw it to file.
@@ -254,16 +274,12 @@ if __name__ == "__main__":
         pickle.dump(NETWORK, output, pickle.HIGHEST_PROTOCOL)
 
 # TODO
+#! Ensure visualization is correct
+#! Try to run with more granular search space
 # Visualize comparison of output between distributions
 # Complete STDP implementation
 ## Ensure weights are updated correctly according to algorithm
 ## Ensure learning hyperparameters are good (learning rate, firing threshold, max weight)
-# Attempt to evolve islands of NEAT populations fit for different algorithms, then combine the islands
-# Improve visualization
-## Visualize a final cycle without a go-input
-## Visualize the ouput of ALL neurons for trials with go at start, middle, and end
-# More distributions
-## Bimodal
 # Hebbian
 ## Log pre- and postsynaptic spikes to ensure they're actually separated in time
 ## Find a way to balance the Hebbian updates
