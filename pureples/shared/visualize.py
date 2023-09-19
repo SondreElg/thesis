@@ -176,32 +176,38 @@ def draw_hist(
     filename,
 ):
     fig = plt.figure()
-    temp = []
-    indices = np.asarray(np.where(network_input == 1))[0]
-    temp = np.split(network_output, indices)
-    split_output = []
-    for entry in temp:
-        entry_len = len(entry)
-        if entry_len and entry_len < cycle_len:
-            split_output.append(np.pad(entry, ((0, cycle_len - entry_len))))
+    indices = np.asarray(np.where(network_input == 1))[0][1:]
+    # print(f"{indices=}")
 
-    split_output = np.array(
-        [np.pad(i, ((0, cycle_len - len(i)))) for i in split_output]
-    )
-    # print(split_output)
+    split_output = np.array(np.split(network_output, indices), dtype=object)
+
+    # print(f"{np.asarray(split_output)=}")
 
     split_expected_output = np.array(
         np.split(expected_output, indices)[:-4], dtype=object
     )
-    print(split_expected_output)
+    split_expected_end_test_output = np.array(
+        np.split(expected_output, indices)[-4:], dtype=object
+    )
+    # print(f"{split_expected_output=}")
+    # print(f"{split_expected_end_test_output=}")
+
+    # print(
+    #     f"{len(split_output)=} | {len(network_output)=} | {len(split_expected_output)=} | {len(expected_output)=} | {len(indices)=}"
+    # )
+
+    # Pad arrays
+    split_output = np.array(
+        [np.pad(i, ((0, cycle_len - len(i)))) for i in split_output]
+    )
     split_expected_output = np.array(
         [np.pad(i, ((0, cycle_len - len(i)))) for i in split_expected_output]
     )
-    expected_avg = np.average(
-        split_expected_output[len(split_output) // 2 : -4], axis=0
-    )
-    avg = np.average(split_output[len(split_output) // 2 : -4], axis=0)
-    max_out = np.max(split_output[len(split_output) // 2 : -4], axis=0)
+
+    # Calculate average for each timestep
+    expected_avg = np.average(split_expected_output[30:-4], axis=0)
+    avg = np.average(split_output[30:-4], axis=0)
+    max_out = np.max(split_output[30:-4], axis=0)
     # print(f"{expected_avg=}")
     # print(f"{avg=}")
     plt.plot(expected_avg, label="expected")
@@ -222,13 +228,23 @@ def draw_hist(
     #     color="r",
     # )
     fig.savefig(filename, dpi=300)
-    end_test_set = np.swapaxes(split_output[-4:], 0, 1)
+    end_test_set = split_output[-4:]
     fig2 = plt.figure()
-    unlabeled = plt.plot(end_test_set)
-    plt.legend(unlabeled, ("first", "middle", "end", "none"))
-    plt.plot(expected_avg, label="expected")
+    # print(f"{split_output[:-4]=}")
+    # print(f"{end_test_set=}")
+    plt.plot(expected_avg, label="expected_avg")
+    plt.plot(end_test_set[0], label="first")
+    plt.plot(end_test_set[1], label="middle")
+    plt.plot(end_test_set[2], label="end")
+    plt.plot(end_test_set[3], label="none")
+    plt.legend()
+
+    # combined = np.append([expected_avg], end_test_set, 0)
+    # print(combined)
+    # unlabeled = plt.plot(combined)
+    # plt.legend(unlabeled, ("expected avg", "first", "middle", "end", "none"))
     plt.show()
-    fig.savefig(filename.split(".")[0] + "_end_tests.png", dpi=300)
+    fig2.savefig(filename.split(".")[0] + "_end_tests.png", dpi=300)
     return
 
 
@@ -239,16 +255,4 @@ def draw_tests(
     expected_output,
     filename,
 ):
-    fig = plt.figure()
-    temp = []
-    indices = np.asarray(np.where(network_input == 1))[0]
-    temp = np.split(network_output, indices)
-    split_output = []
-    for entry in temp:
-        entry_len = len(entry)
-        if entry_len and entry_len < cycle_len:
-            split_output.append(np.pad(entry, ((0, cycle_len - entry_len))))
-
-    split_output = np.array(
-        [np.pad(i, ((0, cycle_len - len(i)))) for i in split_output]
-    )
+    return

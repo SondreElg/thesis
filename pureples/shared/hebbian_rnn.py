@@ -95,34 +95,35 @@ class HebbianRecurrentNetwork(object):
             links,
             learning_rate,
             hebbians,
-        ) in enumerate(self.node_evals):
+        ) in enumerate(self.__prev_node_evals):
             # Max weight temporary hard-coded until config parsing is updated
             # if apply:
             # print(self.hebbian_buffer)
             # print(hebbians)
+            firing_threshold = 0.15
             for i, w in links:
                 # This is ugly, and could be done much cleaner
                 input_val = self.__ivalues[i]
                 output_val = self.__ovalues[i]
                 if w + response * hebbians[i] >= 0:
-                    if input_val > 0.15 and output_val > 0.15:
+                    if input_val > firing_threshold and output_val > firing_threshold:
                         self.hebbian_buffer[idx][i] = (
                             1 - learning_rate
                         ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                            update_factor * input_val * output_val
+                            update_factor * input_val * output_val - firing_threshold
                         )
-                    elif input_val > 0.15 or output_val > 0.15:
+                    elif input_val > firing_threshold or output_val > firing_threshold:
                         self.hebbian_buffer[idx][i] = (
                             1 - learning_rate
                         ) * self.hebbian_buffer[idx][i] - learning_rate * (
-                            update_factor * input_val * output_val
+                            update_factor * input_val * output_val - firing_threshold
                         )
-                    else:
-                        self.hebbian_buffer[idx][i] = (
-                            1 - learning_rate
-                        ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                            update_factor * input_val * output_val
-                        )
+                    # else:
+                    #     self.hebbian_buffer[idx][i] = (
+                    #         1 - learning_rate
+                    #     ) * self.hebbian_buffer[idx][i] + learning_rate * (
+                    #         update_factor * input_val * output_val - firing_threshold
+                    #     )
                     if apply:
                         hebbians[i] = max(
                             min(
@@ -132,23 +133,23 @@ class HebbianRecurrentNetwork(object):
                             -1,
                         )
                 if w + response * hebbians[i] < 0:
-                    if input_val > 0.15 and output_val > 0.15:
+                    if input_val > firing_threshold and output_val > firing_threshold:
                         self.hebbian_buffer[idx][i] = (
                             1 - learning_rate
                         ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                            update_factor * input_val * output_val
+                            update_factor * input_val * output_val - firing_threshold
                         )
-                    elif input_val > 0.15 or output_val > 0.15:
+                    elif input_val > firing_threshold or output_val > firing_threshold:
                         self.hebbian_buffer[idx][i] = (
                             1 - learning_rate
                         ) * self.hebbian_buffer[idx][i] - learning_rate * (
-                            update_factor * input_val * output_val
+                            update_factor * input_val * output_val - firing_threshold
                         )
                     else:
                         self.hebbian_buffer[idx][i] = (
                             1 - learning_rate
                         ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                            update_factor * input_val * output_val
+                            update_factor * input_val * output_val - firing_threshold
                         )
                     if apply:
                         hebbians[i] = max(
@@ -181,9 +182,9 @@ class HebbianRecurrentNetwork(object):
             )
 
         if self.__ivalues:
-            self.update_hebbians(prev_fitness, inputs[0] == 1)
+            self.update_hebbians(inputs[1], inputs[0] == 1)
 
-        self.__prev_node_evals = self.node_evals
+        self.__prev_node_evals = copy.deepcopy(self.node_evals)
 
         self.__ivalues = self.values[self.active]
         self.active = 1 - self.active
