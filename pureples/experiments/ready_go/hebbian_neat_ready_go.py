@@ -21,7 +21,7 @@ VERSION = "M"
 VERSION_TEXT = "small" if VERSION == "S" else "medium" if VERSION == "M" else "large"
 
 foreperiod = 25
-cycles = 200
+cycles = 400
 time_block_size = 5
 cycle_delay_range = [0, 3]
 cycle_len = math.floor(foreperiod / time_block_size)
@@ -33,21 +33,29 @@ training_setup = {
         time_block_size,
         cycle_delay_range,
         [
-            np.random.normal,
-            np.random.triangular,
-            np.random.triangular,
-            bimodal,
             # np.random.normal,
+            # np.random.triangular,
+            # np.random.triangular,
+            # bimodal,
+            np.random.normal,
+            np.random.normal,
+            np.random.normal,
+            np.random.normal,
+            np.random.normal,
         ],
         [
-            {"loc": math.floor(cycle_len / 2), "scale": cycle_len / 4},
-            {"left": 0, "mode": cycle_len - 1, "right": cycle_len},
-            {"left": 0, "mode": 0, "right": cycle_len},
-            {
-                "loc": [math.floor(cycle_len / 4), math.ceil(cycle_len * 3 / 4)],
-                "scale": [cycle_len / 8, cycle_len / 8],
-            },
-            # {"loc": math.floor(cycle_len / 2), "scale": 0},
+            # {"loc": math.floor(cycle_len / 2), "scale": cycle_len / 4},
+            # {"left": 0, "mode": cycle_len, "right": cycle_len},
+            # {"left": 0, "mode": 0, "right": cycle_len},
+            # {
+            #     "loc": [math.floor(cycle_len / 4), math.ceil(cycle_len * 3 / 4)],
+            #     "scale": [cycle_len / 8, cycle_len / 8],
+            # },
+            {"loc": 0, "scale": 0},
+            {"loc": 1, "scale": 0},
+            {"loc": 2, "scale": 0},
+            {"loc": 3, "scale": 0},
+            {"loc": 4, "scale": 0},
         ],
     ],
 }
@@ -175,7 +183,7 @@ def run(*, gens, version, max_trials=1, initial_pop=None):
     setattr(CONFIG, "trials", 1)
     stats_one = neat.StatisticsReporter()
     pop = ini_pop(initial_pop, CONFIG, stats_one)
-    pe = neat.ParallelEvaluator(multiprocessing.cpu_count() - 1, _eval_fitness)
+    pe = neat.ParallelEvaluator(multiprocessing.cpu_count() - 4, _eval_fitness)
     winner_one = pop.run(pe.evaluate, gens)
 
     # print("Second run")
@@ -198,7 +206,7 @@ def run(*, gens, version, max_trials=1, initial_pop=None):
 
 # If run as script.
 if __name__ == "__main__":
-    result = run(gens=100, version=VERSION)
+    result = run(gens=1000, version=VERSION)
     WINNER = result[0][0]  # Only relevant to look at the winner.
     print("\nBest genome:\n{!s}".format(WINNER))
 
@@ -251,8 +259,6 @@ if __name__ == "__main__":
                 else:
                     test_set_expanded[j][0].append(0)
                     test_set_expanded[j][1].append(0)
-
-    # print(f"{test_set_expanded[0][0][-max_trial_len*4:]=}")
 
     run_network(
         None,
