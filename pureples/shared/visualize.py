@@ -95,7 +95,7 @@ def draw_pattern(im, res=60):
     fig.canvas.mpl_connect("button_press_event", onclick)
 
     plt.grid()
-    plt.show()
+    # plt.show()
 
 
 def draw_es(id_to_coords, connections, filename):
@@ -164,8 +164,11 @@ def draw_hebbian(
         for id in ids:
             plt.plot([entry[i][id] for entry in hebbian], label=f"{i}-{id}")
     plt.legend()
-    plt.show()
+    plt.xlabel("timestep")
+    plt.ylabel("magnitude")
+    # plt.show()
     fig.savefig(filename, dpi=300)
+    plt.close()
 
 
 def draw_hist(
@@ -214,7 +217,9 @@ def draw_hist(
     plt.plot(avg, label="actual")
     plt.plot(max_out, label="maximum")
     plt.legend()
-    plt.show()
+    plt.xlabel("timestep")
+    plt.ylabel("magnitude")
+    # plt.show()
     # for i, v in enumerate(network_output):
     #     if v == 1:
     #         temp.append(network_output.split())
@@ -228,6 +233,7 @@ def draw_hist(
     #     color="r",
     # )
     fig.savefig(filename, dpi=300)
+    plt.close()
     end_test_set = split_output[-4:]
     fig2 = plt.figure()
     # print(f"{split_output[:-4]=}")
@@ -238,13 +244,16 @@ def draw_hist(
     plt.plot(end_test_set[2], label="end")
     plt.plot(end_test_set[3], label="none")
     plt.legend()
+    plt.xlabel("timestep")
+    plt.ylabel("output magnitude")
 
     # combined = np.append([expected_avg], end_test_set, 0)
     # print(combined)
     # unlabeled = plt.plot(combined)
     # plt.legend(unlabeled, ("expected avg", "first", "middle", "end", "none"))
-    plt.show()
+    # plt.show()
     fig2.savefig(filename.split(".")[0] + "_end_tests.png", dpi=300)
+    plt.close()
     return
 
 

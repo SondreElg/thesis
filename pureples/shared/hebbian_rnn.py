@@ -100,7 +100,7 @@ class HebbianRecurrentNetwork(object):
             # if apply:
             # print(self.hebbian_buffer)
             # print(hebbians)
-            firing_threshold = 0.15
+            firing_threshold = 0.20
             for i, w in links:
                 # This is ugly, and could be done much cleaner
                 input_val = self.__ivalues[i]
@@ -129,7 +129,7 @@ class HebbianRecurrentNetwork(object):
                         hebbians[i] = max(
                             min(
                                 hebbians[i] + self.hebbian_buffer[idx][i],
-                                1,
+                                10,
                             ),
                             0,
                         )
@@ -157,7 +157,7 @@ class HebbianRecurrentNetwork(object):
                         hebbians[i] = min(
                             max(
                                 hebbians[i] + self.hebbian_buffer[idx][i],
-                                -1,
+                                -10,
                             ),
                             0,
                         )

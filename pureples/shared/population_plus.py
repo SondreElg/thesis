@@ -106,7 +106,7 @@ class Population(object):
                         "Fitness not assigned to genome {}".format(g.key)
                     )
 
-                # print(g.fitness)
+                # print(f"{g.fitness=}")
                 if best is None or g.fitness > best.fitness:
                     best = g
             self.reporters.post_evaluate(
@@ -157,4 +157,4 @@ class Population(object):
                 self.config, self.generation, self.best_genome
             )
 
-        return self.best_genome, self.best_testing_set
+        return self.best_genome, self.best_testing_set, self.species.species

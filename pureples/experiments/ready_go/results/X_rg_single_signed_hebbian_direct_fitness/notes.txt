@@ -1,0 +1,1 @@
+If running with direct fitness, update_hebbians should use node_evals, not __prev_node_evals
