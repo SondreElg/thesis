@@ -6,7 +6,7 @@ def ready_go_list(
     foreperiod,
     cycles,
     time_block_size=None,
-    cycle_delay_range=[0, 1],
+    cycle_delay_range=[0, 6],
     distributions=[],
     distributions_args=[{}],
     trials=1,
@@ -70,6 +70,9 @@ def ready_go_list(
             # expected_output.append(1 / distance**2)
 
         generation_data.append([inputs, expected_output])
+    # order = [0, 4, 2, 3, 1]
+    # generation_data = np.array(generation_data)
+    np.random.shuffle(generation_data)
     return generation_data
 
 

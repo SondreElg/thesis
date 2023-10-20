@@ -129,45 +129,45 @@ class HebbianRecurrentNetwork(object):
                         hebbians[i] = max(
                             min(
                                 hebbians[i] + self.hebbian_buffer[idx][i],
-                                10,
+                                1,
                             ),
                             0,
                         )
                 # if w + response * hebbians[i] < 0:
-                if w < 0:
-                    if input_val > firing_threshold and output_val > firing_threshold:
-                        self.hebbian_buffer[idx][i] = (
-                            1 - learning_rate
-                        ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                            update_factor * input_val * output_val - firing_threshold
-                        )
-                    elif input_val > firing_threshold or output_val > firing_threshold:
-                        self.hebbian_buffer[idx][i] = (
-                            1 - learning_rate
-                        ) * self.hebbian_buffer[idx][i] - learning_rate * (
-                            update_factor * input_val * output_val - firing_threshold
-                        )
-                    # else:
-                    #     self.hebbian_buffer[idx][i] = (
-                    #         1 - learning_rate
-                    #     ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                    #         update_factor * input_val * output_val - firing_threshold
-                    #     )
-                    if apply:
-                        hebbians[i] = min(
-                            max(
-                                hebbians[i] + self.hebbian_buffer[idx][i],
-                                -10,
-                            ),
-                            0,
-                        )
-                if apply:
-                    # hebbians[i] = (
-                    #     hebbians[i] + self.hebbian_buffer[idx][i] * learning_rate
-                    # )
-                    # print(hebbians[i])
-                    self.hebbian_buffer[idx][i] = 0
-                    # print(hebbians[i])
+                # if w < 0:
+                #     if input_val > firing_threshold and output_val > firing_threshold:
+                #         self.hebbian_buffer[idx][i] = (
+                #             1 - learning_rate
+                #         ) * self.hebbian_buffer[idx][i] + learning_rate * (
+                #             update_factor * input_val * output_val - firing_threshold
+                #         )
+                #     elif input_val > firing_threshold or output_val > firing_threshold:
+                #         self.hebbian_buffer[idx][i] = (
+                #             1 - learning_rate
+                #         ) * self.hebbian_buffer[idx][i] - learning_rate * (
+                #             update_factor * input_val * output_val - firing_threshold
+                #         )
+                #     # else:
+                #     #     self.hebbian_buffer[idx][i] = (
+                #     #         1 - learning_rate
+                #     #     ) * self.hebbian_buffer[idx][i] + learning_rate * (
+                #     #         update_factor * input_val * output_val - firing_threshold
+                #     #     )
+                #     if apply:
+                #         hebbians[i] = min(
+                #             max(
+                #                 hebbians[i] + self.hebbian_buffer[idx][i],
+                #                 -10,
+                #             ),
+                #             0,
+                #         )
+                # if apply:
+                #     # hebbians[i] = (
+                #     #     hebbians[i] + self.hebbian_buffer[idx][i] * learning_rate
+                #     # )
+                #     # print(hebbians[i])
+                #     self.hebbian_buffer[idx][i] = 0
+                #     # print(hebbians[i])
 
             if apply:
                 # print(self.hebbian_buffer[idx])
@@ -233,9 +233,11 @@ class HebbianRecurrentNetwork(object):
                 continue
 
             if o not in node_inputs:
-                node_inputs[o] = [(i, cg.weight)]
+                # node_inputs[o] = [(i, cg.weight)]
+                node_inputs[o] = [(i, np.sign(cg.weight))]
             else:
-                node_inputs[o].append((i, cg.weight))
+                # node_inputs[o].append((i, cg.weight))
+                node_inputs[o].append((i, np.sign(cg.weight)))
 
         node_evals = []
         for node_key, inputs in iteritems(node_inputs):

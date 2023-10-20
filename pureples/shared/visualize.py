@@ -164,7 +164,7 @@ def draw_hebbian(
         for id in ids:
             plt.plot([entry[i][id] for entry in hebbian], label=f"{i}-{id}")
     plt.legend()
-    plt.xlabel("timestep")
+    plt.xlabel("trial")
     plt.ylabel("magnitude")
     # plt.show()
     fig.savefig(filename, dpi=300)

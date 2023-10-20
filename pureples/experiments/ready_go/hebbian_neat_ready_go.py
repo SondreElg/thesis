@@ -4,6 +4,8 @@ Fitness threshold set in config
 - by default very high to show the high possible accuracy of this library.
 """
 
+import sys
+import os
 import pickle
 import math
 import neat
@@ -22,6 +24,7 @@ cycles = 100
 time_block_size = 5
 cycle_delay_range = [0, 3]
 cycle_len = math.floor(foreperiod / time_block_size)
+# identity_func = lambda x: x
 training_setup = {
     "function": ready_go_list,
     "params": [
@@ -82,7 +85,6 @@ def run_network(
         fitness = []
         steady = False
         training_over = False
-        hebbian_factors = []
         output = [0, 0]
         # net.reset()
         for index, input in enumerate(inputs):
@@ -121,11 +123,11 @@ def run_network(
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_population{key}_{visualize}_{trial}_outputs.png",
+                f"pureples/experiments/ready_go/results/{folder}/hebbian_neat_ready_go_population{key}_{visualize}_{trial}_outputs.png",
             )
             draw_hebbian(
                 net.hebbian_update_log,
-                f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_population{key}_{visualize}_{trial}_hebbian.png",
+                f"pureples/experiments/ready_go/results/{folder}/hebbian_neat_ready_go_population{key}_{visualize}_{trial}_hebbian.png",
             )
         verbose = False
         if print_fitness:
@@ -183,7 +185,7 @@ def run(*, gens, max_trials=1, initial_pop=None):
     setattr(CONFIG, "trials", 1)
     stats_one = neat.StatisticsReporter()
     pop = ini_pop(initial_pop, CONFIG, stats_one)
-    pe = neat.ParallelEvaluator(multiprocessing.cpu_count() - 4, _eval_fitness)
+    pe = neat.ParallelEvaluator(8, _eval_fitness)
     species_one = pop.run(pe.evaluate, gens)
 
     # print("Second run")
@@ -205,9 +207,6 @@ def run(*, gens, max_trials=1, initial_pop=None):
 
 
 def extract_winning_species(species_set):
-    # for species in species_set:
-    # print(species_set)
-
     species_winners = {k: None for k in species_set.keys()}
     # print(f"{species_winners=}")
     # print(f"{species_set.items()=}")
@@ -225,8 +224,12 @@ def extract_winning_species(species_set):
 
             if (
                 not species_winners[key]
-                or (genome.fitness and species_winners[key].fitness)
-                and genome.fitness > species_winners[key].fitness
+                and genome.fitness
+                or (
+                    genome.fitness
+                    and species_winners[key].fitness
+                    and genome.fitness > species_winners[key].fitness
+                )
             ):
                 species_winners[key] = genome
 
@@ -235,17 +238,20 @@ def extract_winning_species(species_set):
 
 # If run as script.
 if __name__ == "__main__":
+    folder = sys.argv[2] if len(sys.argv) > 2 else "results"
+    if not os.path.exists(f"pureples/experiments/ready_go/results/{folder}"):
+        os.mkdir(os.path.join(os.getcwd(), f"/experiments/ready_go/results/{folder}"))
+
     shutil.copyfile(
-        "pureples/experiments/ready_go/config_cppn_ready_go",
-        "pureples/experiments/ready_go/results/config_cppn_ready_go",
+        "pureples/experiments/ready_go/config_neat_ready_go",
+        f"pureples/experiments/ready_go/results/{folder}/config_neat_ready_go",
     )
-    result = run(gens=1)
+    gens = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
+    result = run(gens=gens)
     winner = result[0][0]  # Only relevant to look at the winner.
     print("\nBest genome:\n{!s}".format(winner))
 
     WINNERS = extract_winning_species(result[0][2])
-    # print(WINNERS)
-    # exit()
 
     count = 0
     for WINNER in WINNERS.values():
@@ -313,7 +319,7 @@ if __name__ == "__main__":
         # Save network if wished reused and draw it to file.
         draw_net(
             NETWORK,
-            filename=f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_population{count}_network",
+            filename=f"pureples/experiments/ready_go/results/{folder}/hebbian_neat_ready_go_population{count}_network",
             node_names={
                 -1: "ready",
                 -2: "go",
@@ -330,16 +336,30 @@ if __name__ == "__main__":
             },
         )
         with open(
-            f"pureples/experiments/ready_go/results/hebbian_neat_ready_go_population{count}_network.pkl",
+            f"pureples/experiments/ready_go/results/{folder}/hebbian_neat_ready_go_population{count}_genome.pkl",
+            "wb",
+        ) as output:
+            pickle.dump(WINNER, output, pickle.HIGHEST_PROTOCOL)
+        with open(
+            f"pureples/experiments/ready_go/results/{folder}/hebbian_neat_ready_go_population{count}_network.pkl",
             "wb",
         ) as output:
             pickle.dump(NETWORK, output, pickle.HIGHEST_PROTOCOL)
+
+        with open(
+            f"pureples/experiments/ready_go/results/{folder}/hebbian_neat_ready_go_population{count}_genome.txt",
+            "w",
+        ) as output:
+            output.write(str(WINNER))
 
 # TODO
 #! Implement the experiment from the Maes et al. 2020 paper to sanity-check the Ready-Go experiment when your arm doesn't hurt like hell
 # Visualize
 ## Comparison of output between distributions
 ## Color-code your outputs?
+## Response factor of nodes/connection (which one is it actually?)
+### There was something else to add when visualizing nodes, right?
+
 # Hebbian
 ## Ensure weights are updated correctly according to algorithm
 ## Would supplying the hebbian updates with the fitness directly be more biologically plausible than the current input-output implementation?
@@ -347,7 +367,8 @@ if __name__ == "__main__":
 ## Make learning rate trainable
 ## The Backpropamine paper's implementation differs slightly, try theirs as well
 # Experiments
-## Focus on single-signed, no fitness input, no modulation
+## Focus on single-signed, no fitness input, WITH modulation
 ## Save best 5 networks for each population
 ## Save more data for visualization purposes
 ## Do a few runs with static negative weights
+## Decrease node/connection mutation rate, focus on weights

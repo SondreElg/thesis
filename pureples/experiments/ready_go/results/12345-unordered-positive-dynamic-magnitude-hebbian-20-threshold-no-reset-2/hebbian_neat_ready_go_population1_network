@@ -1,0 +1,14 @@
+digraph svg {
+	node [fontsize=9 height=0.2 shape=circle width=0.2]
+	ready [fillcolor=yellow shape=box style=filled]
+	go [fillcolor=green shape=box style=filled]
+	o [fillcolor=lightblue style=filled]
+	1591 -> o [color=blue penwidth=0.29870159939968355 style=solid]
+	go -> 1591 [color=red penwidth=0.29237919650042343 style=solid]
+	1591 -> 1591 [color=red penwidth=0.1800248108807409 style=solid]
+	19959 -> 1591 [color=blue penwidth=0.16531708897962308 style=solid]
+	ready -> 19959 [color=red penwidth=0.2835096240992885 style=solid]
+	19959 -> 19959 [color=red penwidth=0.19412342304702312 style=solid]
+	go -> 19959 [color=red penwidth=0.10375418480138887 style=solid]
+	o -> 19959 [color=blue penwidth=0.11052431525154353 style=solid]
+}

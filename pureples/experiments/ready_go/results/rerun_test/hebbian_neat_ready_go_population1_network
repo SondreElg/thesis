@@ -1,0 +1,9 @@
+digraph svg {
+	node [fontsize=9 height=0.2 shape=circle width=0.2]
+	ready [fillcolor=yellow shape=box style=filled]
+	go [fillcolor=green shape=box style=filled]
+	o [fillcolor=lightblue style=filled]
+	28 -> 28 [color=red penwidth=0.30000000000000004 style=solid]
+	go -> 28 [color=blue penwidth=0.30000000000000004 style=solid]
+	28 -> o [color=red penwidth=0.30000000000000004 style=solid]
+}
