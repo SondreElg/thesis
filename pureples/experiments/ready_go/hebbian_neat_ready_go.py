@@ -567,7 +567,7 @@ if __name__ == "__main__":
 # TODO
 # Visualize
 ##^ Output at start and end of each run
-##^ Run omission tests (WITHOUT HEBBIAN)
+##^ Run omission tests (WITHOUT PLASTICITY)
 ##^ Both above -> ALL NODE OUTPUTS
 ##* NETWORK
 ###* Response factor and bias of nodes, weight and hebbian of connections at different timesteps
@@ -578,9 +578,6 @@ if __name__ == "__main__":
 ### Species over time?
 
 # Hebbian
-## Ensure weights are updated correctly according to algorithm
-## Would supplying the hebbian updates with the fitness directly be more biologically plausible than the current input-output implementation?
-## Is multiplying the hebbian factor with an evolved scalar biologically plausible?
 ## Make learning rate trainable
 ## The Backpropamine paper's implementation differs slightly, try theirs as well
 
