@@ -180,8 +180,6 @@ def draw_net(
             input, output = cg.key
             a = node_names.get(input, str(input))
             b = node_names.get(output, str(output))
-            print(f"{input=} | {a=}")
-            print(f"{output=} | {b=}")
             style = "solid" if cg.enabled else "dotted"
             color = "red" if cg.weight > 0 else "blue"
             width = str(0.1 + abs(cg.weight * 5))
@@ -293,7 +291,6 @@ def draw_hebbian(
     hebbian,
     filename,
 ):
-    print(hebbian)
     fig = plt.figure()
     df = pd.DataFrame(
         [
@@ -304,23 +301,6 @@ def draw_hebbian(
     df.to_csv(filename.split(".")[0] + ".csv")
     plt.plot(df)
     plt.legend(df.columns)
-    # print(df)
-    # test = [entry[node][inputs] for entry in hebbian for node, inputs in entry]
-    # print(test)
-    # plt.plot(test)
-    # for entry in hebbian:
-    #     for node in entry:
-    # else:
-    #     for i in range(len(hebbian[0])):
-    #         # print(hebbian[0][i])
-    #         # print(hebbian[0][i].keys())
-    #         ids = list(hebbian[0][i].keys())
-    #         for id in ids:
-    #             if "-" in id:
-    #                 plt.plot([entry[i][id] for entry in hebbian], label=id)
-    #             else:
-    #                 plt.plot([entry[i][id] for entry in hebbian], label=f"{i}-{id}")
-    #     plt.legend()
     plt.xlabel("trial")
     plt.ylabel("magnitude")
     # plt.show()
@@ -334,7 +314,8 @@ def draw_output(
     network_output,
     expected_output,
     filename,
-    end_tests=None,
+    end_tests=0,
+    all_outputs=None,
 ):
     df = pd.DataFrame(
         {
@@ -346,11 +327,8 @@ def draw_output(
     df.to_csv(filename.split(".")[0] + ".csv")
     fig = plt.figure()
     indices = np.asarray(np.where(network_input == 1))[0][1:]
-    # print(f"{indices=}")
 
     split_output = np.array(np.split(network_output, indices), dtype=object)
-
-    # print(f"{np.asarray(split_output)=}")
 
     split_expected_output = np.array(
         np.split(expected_output, indices)[:-4], dtype=object
@@ -358,12 +336,6 @@ def draw_output(
     split_expected_end_test_output = np.array(
         np.split(expected_output, indices)[-4:], dtype=object
     )
-    # print(f"{split_expected_output=}")
-    # print(f"{split_expected_end_test_output=}")
-
-    # print(
-    #     f"{len(split_output)=} | {len(network_output)=} | {len(split_expected_output)=} | {len(expected_output)=} | {len(indices)=}"
-    # )
 
     # Pad arrays
     split_output = np.array(
@@ -376,35 +348,24 @@ def draw_output(
     # Calculate average for each timestep
     expected_avg = np.average(split_expected_output[30:-4], axis=0)
     avg = np.average(split_output[30:-4], axis=0)
-    max_out = np.max(split_output[30:-4], axis=0)
-    # print(f"{expected_avg=}")
-    # print(f"{avg=}")
+    first = split_output[0]
+    trained = split_output[30]
+    last = split_output[len(indices)]
+    # max_out = np.max(split_output[30:-4], axis=0)
     plt.plot(expected_avg, label="expected")
     plt.plot(avg, label="actual")
-    plt.plot(max_out, label="maximum")
+    plt.plot(first, label="first")
+    plt.plot(trained, label="trained")
+    plt.plot(last, label="last")
+    # plt.plot(max_out, label="maximum")
     plt.legend()
     plt.xlabel("timestep")
     plt.ylabel("magnitude")
-    # plt.show()
-    # for i, v in enumerate(network_output):
-    #     if v == 1:
-    #         temp.append(network_output.split())
-    # count, bins, ignored = plt.hist(network_output, 30, density=True)
-    # plt.plot(
-    #     bins,
-    #     1
-    #     / (sigma * np.sqrt(2 * np.pi))
-    #     * np.exp(-((bins - mu) ** 2) / (2 * sigma**2)),
-    #     linewidth=2,
-    #     color="r",
-    # )
     fig.savefig(filename, dpi=300)
     plt.close()
     if end_tests:
-        end_test_set = split_output[-4:]
+        end_test_set = split_output[-end_tests:]
         fig2 = plt.figure()
-        # print(f"{split_output[:-4]=}")
-        # print(f"{end_test_set=}")
         plt.plot(expected_avg, label="expected_avg")
         # plt.plot(end_test_set[0], label="first")
         # plt.plot(end_test_set[1], label="middle")
@@ -421,6 +382,33 @@ def draw_output(
         # plt.show()
         fig2.savefig(filename.split(".")[0] + "_end_tests.png", dpi=300)
         plt.close()
+    if all_outputs:
+        df = pd.DataFrame(all_outputs)
+        df.to_csv(filename.split(".")[0] + f"_all.csv")
+        test_names = [
+            "trial_last",
+            "go_on_first",
+            "go_on_middle",
+            "go_on_end",
+            "go_omitted",
+            "trial_first",
+        ]
+        for test in range(end_tests + 2):
+            df = pd.DataFrame(
+                all_outputs[
+                    indices[-(end_tests - test) - 1] : indices[-(end_tests - test)]
+                    if end_tests - test
+                    else None
+                ]
+            )
+            fig3 = plt.figure()
+            plt.plot(df)
+            plt.legend(df.columns)
+            fig3.savefig(
+                filename.split(".")[0] + f"_all_{test_names[test]}.png", dpi=300
+            )
+            plt.close()
+
     return
 
 

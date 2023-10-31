@@ -11,8 +11,8 @@ class HebbianRecurrentNetwork(object):
         self.output_nodes = outputs
         self.node_evals = node_evals
 
-        self.__ivalues = []
-        self.__ovalues = []
+        self.ivalues = []
+        self.ovalues = []
         self.__spike_window = 3
         self.__firing_threshold = firing_threshold
 
@@ -81,8 +81,8 @@ class HebbianRecurrentNetwork(object):
             link_buffer = []
             for i, w, h in links:
                 # This is ugly, and could be done much cleaner
-                input_val = self.__ivalues[i]
-                output_val = self.__ovalues[i]
+                input_val = self.ivalues[i]
+                output_val = self.ovalues[i]
                 # if w + response * hebbians[i] >= 0:
                 if w >= 0:
                     if (
@@ -198,18 +198,18 @@ class HebbianRecurrentNetwork(object):
                 )
             )
 
-        if self.__ivalues and update_hebbian:
+        if self.ivalues and update_hebbian:
             self.update_hebbians(1, inputs[0])
 
         self.__prev_node_evals = copy.deepcopy(self.node_evals)
 
-        self.__ivalues = self.values[self.active]
+        self.ivalues = self.values[self.active]
         self.active = 1 - self.active
-        self.__ovalues = self.values[self.active]
+        self.ovalues = self.values[self.active]
 
         for i, v in zip(self.input_nodes, inputs):
-            self.__ivalues[i] = v
-            self.__ovalues[i] = v
+            self.ivalues[i] = v
+            self.ovalues[i] = v
 
         for (
             node,
@@ -220,10 +220,10 @@ class HebbianRecurrentNetwork(object):
             links,
             learning_rate,
         ) in self.node_evals:
-            node_inputs = [self.__ivalues[i] * (w + response * h) for i, w, h in links]
+            node_inputs = [self.ivalues[i] * (w + response * h) for i, w, h in links]
             s = aggregation(node_inputs)
-            self.__ovalues[node] = activation(bias + s)
-        return [self.__ovalues[i] for i in self.output_nodes]
+            self.ovalues[node] = activation(bias + s)
+        return [self.ovalues[i] for i in self.output_nodes]
 
     @staticmethod
     def create(genome, config):

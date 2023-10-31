@@ -46,7 +46,7 @@ parser.add_argument("--end_test", default=False)
 args = parser.parse_args()
 
 foreperiod = 25
-cycles = 100
+trials = 100
 time_block_size = 5
 cycle_delay_range = [0, 3]
 cycle_len = math.floor(foreperiod / time_block_size)
@@ -55,7 +55,7 @@ training_setup = {
     "function": ready_go_list,
     "params": [
         foreperiod,
-        cycles,
+        trials,
         time_block_size,
         cycle_delay_range,
         [
@@ -122,29 +122,37 @@ def run_rnn(
     train_set = 0
 
     for inputs, expected_output in ready_go_data:
-        trials = len(inputs)
+        trial = 0
+        # trials = len(inputs)
         outputs = []
+        all_outputs = []
         train_set += 1
         last_fitness = 0.0
         fitness = []
         steady = False
         training_over = False
         output = [0, 0]
-        # net.reset()
+        if args.reset:
+            net.reset()
         for index, input in enumerate(inputs):
             ready = int(input == 1)
             go = int(input == 2)
             steady = (steady or ready) and not go
 
+            if ready:
+                trial += 1
+            end_test = trials - trial > end_tests
+
             # Do we really even need the Go signal?
-            output = net.activate([ready, go], trials - index > end_tests)
+            output = net.activate([ready, go], end_test)
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
 
             outputs.append(output[0])
+            all_outputs.append(copy.deepcopy(net.ovalues))
             if not training_over and ready and index >= 30:
                 training_over = True
-            if training_over:
+            if training_over and not end_test:
                 if last_fitness != -1.0:
                     fitness.append(last_fitness)
             # if expected_output[0] < 0.1:
@@ -167,12 +175,13 @@ def run_rnn(
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}_{visualize}_{train_set}_outputs.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_outputs.png",
                 end_tests=end_tests,
+                all_outputs=all_outputs,
             )
             draw_hebbian(
                 net.hebbian_update_log,
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}_{visualize}_{train_set}_hebbian.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_hebbian.png",
             )
         verbose = False
         if print_fitness:
@@ -220,11 +229,11 @@ def run_iznn(
     dt = net.get_time_step_msec()
     max_time_msec = 11
 
-    trial = 0
-
+    train_set = 0
     for inputs, expected_output in ready_go_data:
         outputs = []
-        trial += 1
+        train_set += 1
+        trial = 0
         last_fitness = 0.0
         fitness = []
         training_over = False
@@ -237,6 +246,7 @@ def run_iznn(
         num_steps = int(max_time_msec / dt)
         # net.reset()
         for index, input in enumerate(inputs):
+            trial += 1
             ready = int(input == 1)
             go = int(input == 2)
             t0 = None
@@ -293,12 +303,12 @@ def run_iznn(
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}_{visualize}_{trial}_outputs.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_outputs.png",
                 end_test=end_test,
             )
             draw_hebbian(
                 net.hebbian_update_log,
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}_{visualize}_{trial}_hebbian.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_hebbian.png",
             )
         verbose = False
         if print_fitness:
@@ -433,7 +443,8 @@ if __name__ == "__main__":
     while os.path.exists(save_dir) and not args.overwrite:
         similar_run += 1
         save_dir = save_dir.split("__")[0] + "__" + str(similar_run)
-    os.mkdir(save_dir)
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
     folder_name = save_dir.split("results/")[1]
 
     shutil.copyfile(
@@ -481,6 +492,9 @@ if __name__ == "__main__":
 
     for WINNER in WINNERS.values():
         count += 1
+        population_dir = f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{count}/"
+        if not os.path.exists(population_dir):
+            os.mkdir(population_dir)
         # Verify network output against training data.
         print("\nOutput:")
         if args.model == "rnn":
@@ -511,19 +525,19 @@ if __name__ == "__main__":
             )
         # Save network if wished reused and draw it to file.
         with open(
-            f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{count}_genome.pkl",
+            f"{population_dir}genome.pkl",
             "wb",
         ) as output:
             pickle.dump(WINNER, output, pickle.HIGHEST_PROTOCOL)
 
         with open(
-            f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{count}_network.pkl",
+            f"{population_dir}network.pkl",
             "wb",
         ) as output:
             pickle.dump(NETWORK, output, pickle.HIGHEST_PROTOCOL)
 
         with open(
-            f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{count}_genome.txt",
+            f"{population_dir}genome.txt",
             "w",
         ) as output:
             output.write(str(WINNER))
@@ -531,7 +545,7 @@ if __name__ == "__main__":
         draw_net(
             CONFIG,
             WINNER,
-            filename=f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{count}_network",
+            filename=f"{population_dir}network",
             prune_unused=True,
             node_names={
                 -1: "ready",
@@ -552,10 +566,9 @@ if __name__ == "__main__":
 
 # TODO
 # Visualize
-## Comparison of output between distributions
-## Output at start and end of each run
-## Run omission tests (WITHOUT HEBBIAN)
-## Both above -> ALL NODE OUTPUTS
+##^ Output at start and end of each run
+##^ Run omission tests (WITHOUT HEBBIAN)
+##^ Both above -> ALL NODE OUTPUTS
 ##* NETWORK
 ###* Response factor and bias of nodes, weight and hebbian of connections at different timesteps
 ####^ Response factor and bias of nodes, weight
