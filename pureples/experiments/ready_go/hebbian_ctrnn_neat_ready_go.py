@@ -1,5 +1,5 @@
 """
-An experiment using a variable-sized ES-HyperNEAT network to perform the ready-go task.
+An experiment using a NEAT network to perform the ready-go task.
 Fitness threshold set in config
 - by default very high to show the high possible accuracy of this library.
 """
@@ -9,15 +9,16 @@ import sys
 import os
 import pickle
 import math
+import argparse
 import neat
 import neat.nn
+import neat.ctrnn
 import multiprocessing
 import numpy as np
 import shutil
 from pureples.shared.visualize import draw_net, draw_hist, draw_hebbian
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
-from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
 from pureples.shared.distributions import bimodal
 
 foreperiod = 25
@@ -100,7 +101,7 @@ def run_network(
             steady = (steady or ready) and not go
 
             # Do we really even need the Go signal?
-            output = net.activate([ready, go], 1)
+            output = net.advance([ready, go], 0.05, 0.01)
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
 
@@ -149,7 +150,7 @@ def _eval_fitness(genome, config):
     Fitness function.
     Evaluate the fitness of a single genome.
     """
-    network = HebbianRecurrentNetwork.create(genome, config)
+    network = neat.ctrnn.CTRNN.create(genome, config, 5)
 
     # genome fitness
     return run_network(None, network, config.train_set)
@@ -243,40 +244,54 @@ def extract_winning_species(species_set):
     return species_winners
 
 
-def network_to_genome(path):
-    with open(sys.argv[3], "rb") as f:
-        network = pickle.load(f)
-
-
 # If run as script.
 if __name__ == "__main__":
-    folder = sys.argv[2] if len(sys.argv) > 2 else "results"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--gens", default=1)
+    parser.add_argument("--target_folder", default="results")
+    parser.add_argument("--load", default=None)
+    parser.add_argument(
+        "--config", default="pureples/experiments/ready_go/config_neat_ready_go"
+    )
+    parser.add_argument("--abs", default=False)
+    parser.add_argument("--firing_threshold", default=0.2)
+    parser.add_argument("--hebbian_learning_rate", default=0.05)
+    args = parser.parse_args()
+
+    setattr(CONFIG, "absolute_weights", bool(args.abs))
+    setattr(CONFIG, "firing_threshold", float(args.firing_threshold))
+    setattr(CONFIG, "learning_rate", float(args.hebbian_learning_rate))
+
+    folder = args.target_folder
     save_dir = os.path.join(os.path.dirname(__file__), f"results/{folder}")
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
 
     shutil.copyfile(
-        config_file,
+        args.config,
         f"pureples/experiments/ready_go/results/{folder}/config_neat_ready_go",
     )
-    loaded = False
-    if len(sys.argv) < 4:
-        gens = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
-        result = run(gens=gens)
+    with open(
+        f"pureples/experiments/ready_go/results/{folder}/args.txt",
+        "w",
+    ) as output:
+        output.write(str(args))
+
+    if args.load:
+        with open(args.load, "rb") as f:
+            WINNERS = {"winner": pickle.load(f)}
+    else:
+        result = run(gens=int(args.gens))
         winner = result[0][0]  # Only relevant to look at the winner.
         print("\nBest genome:\n{!s}".format(winner))
 
         WINNERS = extract_winning_species(result[0][2])
-    else:
-        loaded = True
-        with open(sys.argv[3], "rb") as f:
-            WINNERS = {"winner": pickle.load(f)}
     count = 0
 
     max_trial_len = cycle_len + cycle_delay_range[1]
     test_set = (
         result[0][1]
-        if not loaded
+        if not args.load
         else training_setup["function"](*training_setup["params"])
     )
     test_set_expanded = copy.deepcopy(test_set)
@@ -296,39 +311,8 @@ if __name__ == "__main__":
         count += 1
         # Verify network output against training data.
         print("\nOutput:")
-        NETWORK = HebbianRecurrentNetwork.create(
-            WINNER, CONFIG
-        )  # if not loaded else WINNER
+        NETWORK = neat.ctrnn.CTRNN.create(WINNER, CONFIG, 5)
 
-        # distributions = len(training_setup["params"][4])
-        # if distributions > 1:
-        #     for i in range(distributions):
-        #         single_dist_setup = {
-        #             "function": training_setup["function"],
-        #             "params": [
-        #                 *training_setup["params"][:4],
-        #                 [training_setup["params"][4][i]],
-        #                 [training_setup["params"][5][i]],
-        #             ],
-        #         }
-        #         cycle_len = (
-        #             math.floor(
-        #                 single_dist_setup["params"][0] / single_dist_setup["params"][2]
-        #             )
-        #             + single_dist_setup["params"][3][1]
-        #         )
-        #         max_trial_len = max(max_trial_len, cycle_len)
-        #         setattr(CONFIG, "training_setup", single_dist_setup)
-        #         NETWORK = HebbianRecurrentNetwork.create(WINNER, CONFIG)
-        #         data = single_dist_setup["function"](*single_dist_setup["params"])
-        #         run_network(
-        #             None,
-        #             NETWORK,
-        #             data,
-        #             verbose=True,
-        #             visualize=f"population{count}_dist{i+1}",
-        #             cycle_len=cycle_len,
-        #         )
         NETWORK.reset()
         WINNER.fitness = run_network(
             None,
@@ -376,13 +360,9 @@ if __name__ == "__main__":
             "w",
         ) as output:
             output.write(str(WINNER))
-        print(len(test_set))
-        print(len(test_set[0][0]))
-        print(len(test_set[4][0]))
 
 # TODO
-#! Implement the experiment from the Maes et al. 2020 paper to sanity-check the Ready-Go experiment when your arm doesn't hurt like hell
-# Visualize
+# # Visualize
 ## Comparison of output between distributions
 ## Color-code your outputs?
 ## Response factor of nodes/connection (which one is it actually?)
@@ -396,7 +376,5 @@ if __name__ == "__main__":
 ## The Backpropamine paper's implementation differs slightly, try theirs as well
 # Experiments
 ## Focus on single-signed, no fitness input, WITH modulation
-## Save best 5 networks for each population
-## Save more data for visualization purposes
-## Do a few runs with static negative weights
-## Decrease node/connection mutation rate, focus on weights
+## Try weights up to 10 (to observe hebbian changes in a more fine-grained environment)
+## Implement the experiment from the Maes et al. 2020 paper

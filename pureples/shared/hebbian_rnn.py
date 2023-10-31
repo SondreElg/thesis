@@ -6,7 +6,7 @@ import copy
 
 
 class HebbianRecurrentNetwork(object):
-    def __init__(self, inputs, outputs, node_evals):
+    def __init__(self, inputs, outputs, node_evals, firing_threshold):
         self.input_nodes = inputs
         self.output_nodes = outputs
         self.node_evals = node_evals
@@ -14,10 +14,13 @@ class HebbianRecurrentNetwork(object):
         self.__ivalues = []
         self.__ovalues = []
         self.__spike_window = 3
-        self.hebbian_buffer = [
-            dict([(i, 0.0) for i in eval[7].keys()]) for eval in node_evals
-        ]
-        self.hebbian_update_log = []
+        self.__firing_threshold = firing_threshold
+
+        self.hebbian_buffer = {
+            node: {i[0]: i[2] for i in links}
+            for node, ignored_activation, ignored_aggregation, ignored_bias, ignored_response, links, learning_rate in node_evals
+        }
+        self.hebbian_update_log = [[copy.deepcopy(self.hebbian_buffer)]]
 
         self.values = [{}, {}]
         for v in self.values:
@@ -32,41 +35,19 @@ class HebbianRecurrentNetwork(object):
                 ignored_response,
                 links,
                 learning_rate,
-                hebbians,
             ) in self.node_evals:
                 v[node] = 0.0
-                for i, w in links:
+                for i, w, h in links:
                     v[i] = 0.0
         self.active = 0
         # print(f"init: {self.values=}, {self.node_evals[0][5]=} {self.hebbian=}")
 
     def reset(self):
         # print(f"reset: {self.values=}, {self.node_evals[0][5]=} {self.hebbian=}")
-        self.hebbian_buffer = []
-        for i, (
-            node,
-            ignored_activation,
-            ignored_aggregation,
-            ignored_bias,
-            ignored_response,
-            links,
-            learning_rate,
-            hebbians,
-        ) in enumerate(self.node_evals):
-            hebbians = dict([(i, 0.0) for i in hebbians.keys()])
-            self.hebbian_buffer.append(dict([(i, 0.0) for i in hebbians.keys()]))
-            self.hebbian_update_log = []
-            self.node_evals[i] = [
-                node,
-                ignored_activation,
-                ignored_aggregation,
-                ignored_bias,
-                ignored_response,
-                links,
-                learning_rate,
-                hebbians,
-            ]
-        # self.hebbian_buffer = [eval[7] for eval in self.node_evals]
+        self.hebbian_buffer = {
+            node: {i[0]: i[2] for i in links}
+            for node, ignored_activation, ignored_aggregation, ignored_bias, ignored_response, links, learning_rate in self.node_evals
+        }
         self.values = [dict((k, 0.0) for k in v) for v in self.values]
         self.active = 0
 
@@ -80,11 +61,9 @@ class HebbianRecurrentNetwork(object):
         # if fitness < 0.70:
         #     return
         # print("WE HERE BOIS")
-        if apply:
-            # print("APPLYING")
-            self.hebbian_update_log.append(
-                copy.deepcopy([eval[7] for eval in self.node_evals])
-            )
+        # if apply:
+        # print("APPLYING")
+        # self.hebbian_update_log.append([copy.deepcopy(self.hebbian_buffer)])
         # print(self.hebbian_buffer)
         for idx, (
             node,
@@ -94,88 +73,124 @@ class HebbianRecurrentNetwork(object):
             response,
             links,
             learning_rate,
-            hebbians,
-        ) in enumerate(self.__prev_node_evals):
+        ) in enumerate(self.node_evals):
             # Max weight temporary hard-coded until config parsing is updated
             # if apply:
             # print(self.hebbian_buffer)
             # print(hebbians)
-            firing_threshold = 0.20
-            for i, w in links:
+            link_buffer = []
+            for i, w, h in links:
                 # This is ugly, and could be done much cleaner
                 input_val = self.__ivalues[i]
                 output_val = self.__ovalues[i]
                 # if w + response * hebbians[i] >= 0:
                 if w >= 0:
-                    if input_val > firing_threshold and output_val > firing_threshold:
-                        self.hebbian_buffer[idx][i] = (
+                    if (
+                        input_val > self.__firing_threshold
+                        and output_val > self.__firing_threshold
+                    ):
+                        self.hebbian_buffer[node][i] = (
                             1 - learning_rate
-                        ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                            update_factor * input_val * output_val - firing_threshold
+                        ) * self.hebbian_buffer[node][i] + learning_rate * (
+                            update_factor * input_val * output_val
+                            - self.__firing_threshold
                         )
-                    elif input_val > firing_threshold or output_val > firing_threshold:
-                        self.hebbian_buffer[idx][i] = (
+                    elif (
+                        input_val > self.__firing_threshold
+                        or output_val > self.__firing_threshold
+                    ):
+                        self.hebbian_buffer[node][i] = (
                             1 - learning_rate
-                        ) * self.hebbian_buffer[idx][i] - learning_rate * (
-                            update_factor * input_val * output_val - firing_threshold
+                        ) * self.hebbian_buffer[node][i] - learning_rate * (
+                            update_factor * input_val * output_val
+                            - self.__firing_threshold
                         )
                     # else:
-                    #     self.hebbian_buffer[idx][i] = (
+                    #     self.hebbian_buffer[node][i] = (
                     #         1 - learning_rate
-                    #     ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                    #         update_factor * input_val * output_val - firing_threshold
+                    #     ) * self.hebbian_buffer[node][i] + learning_rate * (
+                    #         update_factor * input_val * output_val - self.__firing_threshold
                     #     )
-                    if apply:
-                        hebbians[i] = max(
-                            min(
-                                hebbians[i] + self.hebbian_buffer[idx][i],
-                                1,
-                            ),
-                            0,
-                        )
-                # if w + response * hebbians[i] < 0:
-                # if w < 0:
-                #     if input_val > firing_threshold and output_val > firing_threshold:
-                #         self.hebbian_buffer[idx][i] = (
-                #             1 - learning_rate
-                #         ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                #             update_factor * input_val * output_val - firing_threshold
-                #         )
-                #     elif input_val > firing_threshold or output_val > firing_threshold:
-                #         self.hebbian_buffer[idx][i] = (
-                #             1 - learning_rate
-                #         ) * self.hebbian_buffer[idx][i] - learning_rate * (
-                #             update_factor * input_val * output_val - firing_threshold
-                #         )
-                #     # else:
-                #     #     self.hebbian_buffer[idx][i] = (
-                #     #         1 - learning_rate
-                #     #     ) * self.hebbian_buffer[idx][i] + learning_rate * (
-                #     #         update_factor * input_val * output_val - firing_threshold
-                #     #     )
-                #     if apply:
-                #         hebbians[i] = min(
-                #             max(
-                #                 hebbians[i] + self.hebbian_buffer[idx][i],
-                #                 -10,
-                #             ),
-                #             0,
-                #         )
-                # if apply:
-                #     # hebbians[i] = (
-                #     #     hebbians[i] + self.hebbian_buffer[idx][i] * learning_rate
-                #     # )
-                #     # print(hebbians[i])
-                #     self.hebbian_buffer[idx][i] = 0
-                #     # print(hebbians[i])
+                if apply:
+                    h = max(
+                        min(
+                            self.hebbian_buffer[node][i],
+                            1,
+                        ),
+                        -1,
+                    )
+                    if abs(w) + h * response < 0:
+                        h = (h * response - (abs(w) + h * response)) / response
+                    self.hebbian_buffer[node][i] = h
+        if apply:
+            self.hebbian_update_log.append([copy.deepcopy(self.hebbian_buffer)])
 
-            if apply:
-                # print(self.hebbian_buffer[idx])
-                # print(hebbians)
-                self.node_evals[idx] = self.node_evals[idx][:-1] + [hebbians]
-                # print(self.node_evals[idx])
+            #         print(f"{h=}")
+            #         link_buffer.append(
+            #             (
+            #                 i,
+            #                 w,
+            #                 max(
+            #                     min(
+            #                         h + self.hebbian_buffer[node][i],
+            #                         1,
+            #                     ),
+            #                     0,
+            #                 ),
+            #             )
+            #         )
+            # self.hebbian_buffer[node][i] =
+            #     # else:
+            #     #     if apply:
+            #     #         link_buffer.append((i, w, h))
 
-    def activate(self, inputs, prev_fitness):
+            # if apply:
+            #     new_links = link_buffer
+            #     # print("HERE")
+            #     # print(self.node_evals[idx])
+            #     self.node_evals[idx] = (
+            #         *self.node_evals[idx][:5],
+            #         new_links,
+            #         self.node_evals[idx][-1],
+            #     )
+            # print(self.node_evals[idx])
+            # if w + response * hebbians[i] < 0:
+            # if w < 0:
+            #     if input_val > self.__firing_threshold and output_val > self.__firing_threshold:
+            #         self.hebbian_buffer[node][i] = (
+            #             1 - learning_rate
+            #         ) * self.hebbian_buffer[node][i] + learning_rate * (
+            #             update_factor * input_val * output_val - self.__firing_threshold
+            #         )
+            #     elif input_val > self.__firing_threshold or output_val > self.__firing_threshold:
+            #         self.hebbian_buffer[node][i] = (
+            #             1 - learning_rate
+            #         ) * self.hebbian_buffer[node][i] - learning_rate * (
+            #             update_factor * input_val * output_val - self.__firing_threshold
+            #         )
+            #     # else:
+            #     #     self.hebbian_buffer[node][i] = (
+            #     #         1 - learning_rate
+            #     #     ) * self.hebbian_buffer[node][i] + learning_rate * (
+            #     #         update_factor * input_val * output_val - self.__firing_threshold
+            #     #     )
+            #     if apply:
+            #         hebbians[i] = min(
+            #             max(
+            #                 hebbians[i] + self.hebbian_buffer[node][i],
+            #                 -10,
+            #             ),
+            #             0,
+            #         )
+            # if apply:
+            #     # hebbians[i] = (
+            #     #     hebbians[i] + self.hebbian_buffer[node][i] * learning_rate
+            #     # )
+            #     # print(hebbians[i])
+            #     self.hebbian_buffer[node][i] = 0
+            #     # print(hebbians[i])
+
+    def activate(self, inputs, update_hebbian=True):
         if len(self.input_nodes) != len(inputs):
             raise RuntimeError(
                 "Expected {0:n} inputs, got {1:n}".format(
@@ -183,8 +198,8 @@ class HebbianRecurrentNetwork(object):
                 )
             )
 
-        if self.__ivalues:
-            self.update_hebbians(inputs[1], inputs[0] == 1)
+        if self.__ivalues and update_hebbian:
+            self.update_hebbians(1, inputs[0])
 
         self.__prev_node_evals = copy.deepcopy(self.node_evals)
 
@@ -204,11 +219,8 @@ class HebbianRecurrentNetwork(object):
             response,
             links,
             learning_rate,
-            hebbians,
         ) in self.node_evals:
-            node_inputs = [
-                self.__ivalues[i] * (w + response * hebbians[i]) for i, w in links
-            ]
+            node_inputs = [self.__ivalues[i] * (w + response * h) for i, w, h in links]
             s = aggregation(node_inputs)
             self.__ovalues[node] = activation(bias + s)
         return [self.__ovalues[i] for i in self.output_nodes]
@@ -232,12 +244,11 @@ class HebbianRecurrentNetwork(object):
             if o not in required and i not in required or (i < 0 and o == 0):
                 continue
 
+            weight = np.sign(cg.weight) if config.binary_weights else cg.weight
             if o not in node_inputs:
-                # node_inputs[o] = [(i, cg.weight)]
-                node_inputs[o] = [(i, np.sign(cg.weight))]
+                node_inputs[o] = [(i, weight, 0.0)]
             else:
-                # node_inputs[o].append((i, cg.weight))
-                node_inputs[o].append((i, np.sign(cg.weight)))
+                node_inputs[o].append((i, weight, 0.0))
 
         node_evals = []
         for node_key, inputs in iteritems(node_inputs):
@@ -247,9 +258,7 @@ class HebbianRecurrentNetwork(object):
                 node.aggregation
             )
             # Temporary until config parsing is updated
-            # Add variable learning rate and embed hebbian values to node_evals
-            learning_rate = 0.05
-            hebbians = dict([(i, 0.0) for i, _ in inputs])
+            # Add variable learning rate
             node_evals.append(
                 [
                     node_key,
@@ -258,11 +267,13 @@ class HebbianRecurrentNetwork(object):
                     node.bias,
                     node.response,
                     inputs,
-                    learning_rate,
-                    hebbians,
+                    config.learning_rate,
                 ]
             )
 
         return HebbianRecurrentNetwork(
-            genome_config.input_keys, genome_config.output_keys, node_evals
+            genome_config.input_keys,
+            genome_config.output_keys,
+            node_evals,
+            config.firing_threshold,
         )

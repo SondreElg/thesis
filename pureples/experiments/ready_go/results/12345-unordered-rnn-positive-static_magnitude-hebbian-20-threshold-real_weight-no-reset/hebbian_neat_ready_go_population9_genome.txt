@@ -1,0 +1,14 @@
+Key: 107
+Fitness: 0.8561842745578861
+Nodes:
+	0 DefaultNodeGene(key=0, bias=-2.121448324680275, response=1.0, activation=sigmoid, aggregation=sum)
+	213 DefaultNodeGene(key=213, bias=-0.4711570217875146, response=1.0, activation=sigmoid, aggregation=sum)
+	214 DefaultNodeGene(key=214, bias=0.423165712561875, response=1.0, activation=sigmoid, aggregation=sum)
+Connections:
+	DefaultConnectionGene(key=(-2, 0), weight=0.2266228963466712, enabled=True)
+	DefaultConnectionGene(key=(-2, 213), weight=-0.15888602370391375, enabled=True)
+	DefaultConnectionGene(key=(-1, 213), weight=-0.26756277591435973, enabled=True)
+	DefaultConnectionGene(key=(-1, 214), weight=0.9051629901565819, enabled=True)
+	DefaultConnectionGene(key=(213, 0), weight=-0.016339745491752666, enabled=True)
+	DefaultConnectionGene(key=(214, 0), weight=0.6229629204968069, enabled=True)
+	DefaultConnectionGene(key=(214, 214), weight=0.13930721728776263, enabled=True)

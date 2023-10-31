@@ -3,23 +3,54 @@ Varying visualisation tools.
 """
 
 import pickle
+import warnings
 import graphviz
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import math
+import pandas as pd
 
 
-def draw_net(net, filename=None, node_names={}, node_colors={}):
-    """
-    Draw neural network with arbitrary topology.
-    """
+def draw_net2(
+    config,
+    genome,
+    view=False,
+    filename=None,
+    node_names=None,
+    show_disabled=True,
+    prune_unused=False,
+    node_colors=None,
+    fmt="svg",
+):
+    """Receives a genome and draws a neural network with arbitrary topology."""
+    # Attributes for network nodes.
+    if graphviz is None:
+        warnings.warn(
+            "This display is not available due to a missing optional dependency (graphviz)"
+        )
+        return
+
+    # If requested, use a copy of the genome which omits all components that won't affect the output.
+    if prune_unused:
+        genome = genome.get_pruned_copy(config.genome_config)
+
+    if node_names is None:
+        node_names = {}
+
+    assert type(node_names) is dict
+
+    if node_colors is None:
+        node_colors = {}
+
+    assert type(node_colors) is dict
+
     node_attrs = {"shape": "circle", "fontsize": "9", "height": "0.2", "width": "0.2"}
 
-    dot = graphviz.Digraph("svg", node_attr=node_attrs)
+    dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
 
     inputs = set()
-    for k in net.input_nodes:
+    for k in config.genome_config.input_keys:
         inputs.add(k)
         name = node_names.get(k, str(k))
         input_attrs = {
@@ -30,28 +61,135 @@ def draw_net(net, filename=None, node_names={}, node_colors={}):
         dot.node(name, _attributes=input_attrs)
 
     outputs = set()
-    for k in net.output_nodes:
+    for k in config.genome_config.output_keys:
         outputs.add(k)
         name = node_names.get(k, str(k))
         node_attrs = {"style": "filled", "fillcolor": node_colors.get(k, "lightblue")}
+
         dot.node(name, _attributes=node_attrs)
 
-    # print(f"{net.node_evals=}")
-    for entry in net.node_evals:
-        node = entry[0]
-        links = entry[5]
-        for i, w in links:
-            node_input, output = node, i
-            a = node_names.get(output, str(output))
-            b = node_names.get(node_input, str(node_input))
-            style = "solid"
-            color = "red" if w > 0.0 else "blue"
-            width = str(0.1 + abs(w / 5.0))
+    used_nodes = set(genome.nodes.keys())
+    for n in used_nodes:
+        if n in inputs or n in outputs:
+            continue
+
+        attrs = {"style": "filled", "fillcolor": node_colors.get(n, "white")}
+        dot.node(str(n), _attributes=attrs)
+
+    for cg in genome.connections.values():
+        if cg.enabled or show_disabled:
+            # if cg.input not in used_nodes or cg.output not in used_nodes:
+            #    continue
+            input, output = cg.key
+            a = node_names.get(input, str(input))
+            b = node_names.get(output, str(output))
+            style = "solid" if cg.enabled else "dotted"
+            color = "red" if cg.weight > 0 else "blue"
+            width = str(0.1 + abs(cg.weight / 5.0))
             dot.edge(
                 a, b, _attributes={"style": style, "color": color, "penwidth": width}
             )
 
-    dot.render(filename)
+    dot.render(filename, view=view)
+
+    return dot
+
+
+def draw_net(
+    config,
+    genome,
+    view=False,
+    filename=None,
+    node_names=None,
+    show_disabled=True,
+    prune_unused=False,
+    node_colors=None,
+    fmt="svg",
+    detailed=False,
+    outputs=None,
+):
+    """Receives a genome and draws a neural network with arbitrary topology."""
+    # Attributes for network nodes.
+    if graphviz is None:
+        warnings.warn(
+            "This display is not available due to a missing optional dependency (graphviz)"
+        )
+        return
+
+    # If requested, use a copy of the genome which omits all components that won't affect the output.
+    if prune_unused:
+        genome = genome.get_pruned_copy(config.genome_config)
+
+    if node_names is None:
+        node_names = {}
+
+    assert type(node_names) is dict
+
+    if node_colors is None:
+        node_colors = {}
+
+    assert type(node_colors) is dict
+
+    node_attrs = {"shape": "circle", "fontsize": "9", "height": "0.2", "width": "0.2"}
+
+    dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
+
+    inputs = set()
+    for k in config.genome_config.input_keys:
+        inputs.add(k)
+        name = node_names.get(k, str(k))
+        # if detailed:
+        #     node = genome.nodes[k]
+        #     name = f"key: {name}\nbias: {node.bias}\nresponse: {node.response}"
+        input_attrs = {
+            "style": "filled",
+            "shape": "box",
+            "fillcolor": node_colors.get(k, "lightgray"),
+        }
+        dot.node(name, _attributes=input_attrs)
+
+    outputs = set()
+    for k in config.genome_config.output_keys:
+        outputs.add(k)
+        name = node_names.get(k, str(k))
+        if detailed:
+            node = genome.nodes[k]
+            name = f"key {name}\nbias {'%.3f' % node.bias}\nh_scaling {'%.3f' % node.response}"
+            node_names[k] = name
+        node_attrs = {"style": "filled", "fillcolor": node_colors.get(k, "lightblue")}
+
+        dot.node(name, _attributes=node_attrs)
+
+    used_nodes = set(genome.nodes.keys())
+    for n in used_nodes:
+        if n in inputs or n in outputs:
+            continue
+
+        name = node_names.get(n, str(n))
+        if detailed:
+            node = genome.nodes[n]
+            name = f"key {name}\nbias {'%.3f' % node.bias}\nh_scaling {'%.3f' % node.response}"
+            node_names[n] = name
+        attrs = {"style": "filled", "fillcolor": node_colors.get(n, "white")}
+        dot.node(name, _attributes=attrs)
+
+    for cg in genome.connections.values():
+        if cg.enabled or show_disabled:
+            # if cg.input not in used_nodes or cg.output not in used_nodes:
+            #    continue
+            input, output = cg.key
+            a = node_names.get(input, str(input))
+            b = node_names.get(output, str(output))
+            print(f"{input=} | {a=}")
+            print(f"{output=} | {b=}")
+            style = "solid" if cg.enabled else "dotted"
+            color = "red" if cg.weight > 0 else "blue"
+            width = str(0.1 + abs(cg.weight * 5))
+            dot.edge(
+                a, b, _attributes={"style": style, "color": color, "penwidth": width}
+            )
+
+    dot.render(filename, view=view)
 
     return dot
 
@@ -156,14 +294,31 @@ def draw_hebbian(
     filename,
 ):
     fig = plt.figure()
-    # print(hebbian)
-    for i in range(len(hebbian[0])):
-        # print(hebbian[0][i])
-        # print(hebbian[0][i].keys())
-        ids = list(hebbian[0][i].keys())
-        for id in ids:
-            plt.plot([entry[i][id] for entry in hebbian], label=f"{i}-{id}")
-    plt.legend()
+    df = pd.DataFrame(
+        [
+            {f"{k}-{k2}": v2 for d in i for k, v in d.items() for k2, v2 in v.items()}
+            for i in hebbian
+        ]
+    )
+    plt.plot(df)
+    plt.legend(df.columns)
+    # print(df)
+    # test = [entry[node][inputs] for entry in hebbian for node, inputs in entry]
+    # print(test)
+    # plt.plot(test)
+    # for entry in hebbian:
+    #     for node in entry:
+    # else:
+    #     for i in range(len(hebbian[0])):
+    #         # print(hebbian[0][i])
+    #         # print(hebbian[0][i].keys())
+    #         ids = list(hebbian[0][i].keys())
+    #         for id in ids:
+    #             if "-" in id:
+    #                 plt.plot([entry[i][id] for entry in hebbian], label=id)
+    #             else:
+    #                 plt.plot([entry[i][id] for entry in hebbian], label=f"{i}-{id}")
+    #     plt.legend()
     plt.xlabel("trial")
     plt.ylabel("magnitude")
     # plt.show()
@@ -177,7 +332,16 @@ def draw_hist(
     network_output,
     expected_output,
     filename,
+    end_tests=None,
 ):
+    df = pd.DataFrame(
+        {
+            "input": network_input,
+            "expected_output": expected_output,
+            "network_output": network_output,
+        },
+    )
+    df.to_csv(filename.split(".")[0] + ".csv")
     fig = plt.figure()
     indices = np.asarray(np.where(network_input == 1))[0][1:]
     # print(f"{indices=}")
@@ -234,26 +398,27 @@ def draw_hist(
     # )
     fig.savefig(filename, dpi=300)
     plt.close()
-    end_test_set = split_output[-4:]
-    fig2 = plt.figure()
-    # print(f"{split_output[:-4]=}")
-    # print(f"{end_test_set=}")
-    plt.plot(expected_avg, label="expected_avg")
-    plt.plot(end_test_set[0], label="first")
-    plt.plot(end_test_set[1], label="middle")
-    plt.plot(end_test_set[2], label="end")
-    plt.plot(end_test_set[3], label="none")
-    plt.legend()
-    plt.xlabel("timestep")
-    plt.ylabel("output magnitude")
+    if end_tests:
+        end_test_set = split_output[-4:]
+        fig2 = plt.figure()
+        # print(f"{split_output[:-4]=}")
+        # print(f"{end_test_set=}")
+        plt.plot(expected_avg, label="expected_avg")
+        # plt.plot(end_test_set[0], label="first")
+        # plt.plot(end_test_set[1], label="middle")
+        # plt.plot(end_test_set[2], label="end")
+        plt.plot(end_test_set[3], label="omission")
+        plt.legend()
+        plt.xlabel("timestep")
+        plt.ylabel("output magnitude")
 
-    # combined = np.append([expected_avg], end_test_set, 0)
-    # print(combined)
-    # unlabeled = plt.plot(combined)
-    # plt.legend(unlabeled, ("expected avg", "first", "middle", "end", "none"))
-    # plt.show()
-    fig2.savefig(filename.split(".")[0] + "_end_tests.png", dpi=300)
-    plt.close()
+        # combined = np.append([expected_avg], end_test_set, 0)
+        # print(combined)
+        # unlabeled = plt.plot(combined)
+        # plt.legend(unlabeled, ("expected avg", "first", "middle", "end", "none"))
+        # plt.show()
+        fig2.savefig(filename.split(".")[0] + "_end_tests.png", dpi=300)
+        plt.close()
     return
 
 

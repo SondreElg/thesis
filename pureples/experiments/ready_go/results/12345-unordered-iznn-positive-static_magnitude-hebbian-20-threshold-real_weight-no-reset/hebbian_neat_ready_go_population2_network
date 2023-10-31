@@ -1,0 +1,15 @@
+digraph {
+	node [fontsize=9 height=0.2 shape=circle width=0.2]
+	ready [fillcolor=yellow shape=box style=filled]
+	go [fillcolor=green shape=box style=filled]
+	o1 [fillcolor=lightblue style=filled]
+	1 [fillcolor=lightblue style=filled]
+	2 [fillcolor=white style=filled]
+	go -> 2 [color=red penwidth=0.1276193456358763 style=solid]
+	2 -> o1 [color=red penwidth=0.18632794244201323 style=solid]
+	go -> o1 [color=red penwidth=0.10916042497723168 style=solid]
+	go -> o2 [color=red penwidth=0.22108705013920094 style=solid]
+	o1 -> o1 [color=red penwidth=0.18117822662056435 style=solid]
+	ready -> o1 [color=blue penwidth=0.2320188538733629 style=solid]
+	o2 -> o1 [color=red penwidth=0.30000000000000004 style=solid]
+}
