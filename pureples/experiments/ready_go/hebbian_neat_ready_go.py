@@ -16,7 +16,7 @@ import multiprocessing
 import numpy as np
 import shutil
 import pureples
-from pureples.shared.visualize import draw_net, draw_net2, draw_hist, draw_hebbian
+from pureples.shared.visualize import draw_net, draw_net2, draw_output, draw_hebbian
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
@@ -114,17 +114,17 @@ def run_rnn(
     visualize="",
     cycle_len=0,
     key=None,
-    end_tests=False,
+    end_tests=0,
 ):
     print_fitness = verbose
     network_fitness = []
 
-    trial = 0
+    train_set = 0
 
     for inputs, expected_output in ready_go_data:
         trials = len(inputs)
         outputs = []
-        trial += 1
+        train_set += 1
         last_fitness = 0.0
         fitness = []
         steady = False
@@ -137,7 +137,7 @@ def run_rnn(
             steady = (steady or ready) and not go
 
             # Do we really even need the Go signal?
-            output = net.activate([ready, go], trials - index < end_tests)
+            output = net.activate([ready, go], trials - index > end_tests)
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
 
@@ -162,17 +162,17 @@ def run_rnn(
             network_fitness.append([0.0])
 
         if visualize:
-            draw_hist(
+            draw_output(
                 cycle_len,
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}_{visualize}_{trial}_outputs.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}_{visualize}_{train_set}_outputs.png",
                 end_tests=end_tests,
             )
             draw_hebbian(
                 net.hebbian_update_log,
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}_{visualize}_{trial}_hebbian.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}_{visualize}_{train_set}_hebbian.png",
             )
         verbose = False
         if print_fitness:
@@ -288,7 +288,7 @@ def run_iznn(
             network_fitness.append([0.0])
 
         if visualize:
-            draw_hist(
+            draw_output(
                 cycle_len,
                 np.array(inputs),
                 np.array(outputs),
@@ -401,9 +401,11 @@ def extract_winning_species(species_set, winner, limit=10):
             ):
                 species_winners[key] = genome
     return dict(
-        sorted(species_winners.items(), key=lambda x: x[1].fitness, reverse=True)[
-            :limit
-        ]
+        sorted(
+            species_winners.items(),
+            key=lambda x: x[1].fitness if x[1] else -1,
+            reverse=True,
+        )[:limit]
     )
 
 

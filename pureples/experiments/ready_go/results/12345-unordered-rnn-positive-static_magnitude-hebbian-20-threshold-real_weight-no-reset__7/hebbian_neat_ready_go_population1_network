@@ -1,0 +1,33 @@
+digraph {
+	node [fontsize=9 height=0.2 shape=circle width=0.2]
+	ready [fillcolor=yellow shape=box style=filled]
+	go [fillcolor=green shape=box style=filled]
+	"key output
+bias -0.557
+h_scaling 1.000" [fillcolor=lightblue style=filled]
+	"key 394
+bias -0.180
+h_scaling 1.000" [fillcolor=white style=filled]
+	go -> "key 394
+bias -0.180
+h_scaling 1.000" [color=blue penwidth=3.963027975184275 style=solid]
+	go -> "key output
+bias -0.557
+h_scaling 1.000" [color=red penwidth=4.3469434974367855 style=solid]
+	ready -> "key output
+bias -0.557
+h_scaling 1.000" [color=red penwidth=2.161073776014972 style=solid]
+	ready -> "key 394
+bias -0.180
+h_scaling 1.000" [color=red penwidth=2.648041491893134 style=solid]
+	"key 394
+bias -0.180
+h_scaling 1.000" -> "key 394
+bias -0.180
+h_scaling 1.000" [color=red penwidth=2.2177420522066345 style=solid]
+	"key 394
+bias -0.180
+h_scaling 1.000" -> "key output
+bias -0.557
+h_scaling 1.000" [color=red penwidth=1.2165109971494228 style=solid]
+}

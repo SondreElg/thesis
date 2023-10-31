@@ -15,7 +15,7 @@ import neat.nn
 import multiprocessing
 import numpy as np
 import shutil
-from pureples.shared.visualize import draw_net, draw_hist, draw_hebbian
+from pureples.shared.visualize import draw_net, draw_output, draw_hebbian
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
 from pureples.shared.distributions import bimodal
@@ -138,7 +138,7 @@ def run_network(
             network_fitness.append([0.0])
 
         if visualize:
-            draw_hist(
+            draw_output(
                 cycle_len,
                 np.array(inputs),
                 np.array(outputs),

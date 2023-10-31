@@ -10,7 +10,7 @@ import neat
 import neat.nn
 import multiprocessing
 import numpy as np
-from pureples.shared.visualize import draw_net, draw_hist
+from pureples.shared.visualize import draw_net, draw_output
 from pureples.shared.ready_go import ready_go_list, ready_go_list_zip
 from pureples.shared.no_direct_rnn import RecurrentNetwork
 from pureples.shared.population_plus import Population
@@ -97,7 +97,7 @@ def run_network(network, net, ready_go_data, verbose=False, visualize="", cycle_
             trial_fitness.append(0.0)
 
         if visualize:
-            draw_hist(
+            draw_output(
                 cycle_len,
                 np.array(inputs),
                 np.array(outputs),

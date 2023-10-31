@@ -293,13 +293,15 @@ def draw_hebbian(
     hebbian,
     filename,
 ):
+    print(hebbian)
     fig = plt.figure()
     df = pd.DataFrame(
         [
-            {f"{k}-{k2}": v2 for d in i for k, v in d.items() for k2, v2 in v.items()}
+            {f"{k2}-{k}": v2 for d in i for k, v in d.items() for k2, v2 in v.items()}
             for i in hebbian
         ]
     )
+    df.to_csv(filename.split(".")[0] + ".csv")
     plt.plot(df)
     plt.legend(df.columns)
     # print(df)
@@ -326,7 +328,7 @@ def draw_hebbian(
     plt.close()
 
 
-def draw_hist(
+def draw_output(
     cycle_len,
     network_input,
     network_output,

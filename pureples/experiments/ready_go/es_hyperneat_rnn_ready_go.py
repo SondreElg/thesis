@@ -11,7 +11,7 @@ import neat.nn
 import multiprocessing
 import numpy as np
 from pureples.shared.substrate import Substrate
-from pureples.shared.visualize import draw_net, draw_hist
+from pureples.shared.visualize import draw_net, draw_output
 from pureples.es_hyperneat_rnn.es_hyperneat_rnn import ESNetworkRNN
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
@@ -104,7 +104,7 @@ def run_network(network, net, ready_go_data, verbose=False, visualize=False):
             outputs.append(*output)
 
         if visualize:
-            draw_hist(
+            draw_output(
                 "",
                 np.array(inputs),
                 np.array(outputs),
