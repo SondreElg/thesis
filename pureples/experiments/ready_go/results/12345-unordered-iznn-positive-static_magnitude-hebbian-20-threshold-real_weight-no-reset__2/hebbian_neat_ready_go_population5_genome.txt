@@ -1,0 +1,13 @@
+Key: 145098
+Fitness: 0.8588538832065057
+Nodes:
+	0 IZNodeGene(key=0, bias=0.1435936377624828, a=0.02, b=0.2, c=-30.0, d=8.0, response=0.651888992949361)
+	26290 IZNodeGene(key=26290, bias=0.14849148051893826, a=0.02, b=0.2, c=-30.0, d=8.0, response=1.576890086295673)
+	26778 IZNodeGene(key=26778, bias=0.10234449717265602, a=0.02, b=0.2, c=-30.0, d=8.0, response=1.1509529552140074)
+	26813 IZNodeGene(key=26813, bias=0.3205877049077277, a=0.02, b=0.2, c=-30.0, d=8.0, response=1.4212227914415723)
+Connections:
+	DefaultConnectionGene(key=(-2, 26813), weight=0.1483870642268653, enabled=True)
+	DefaultConnectionGene(key=(-1, 26290), weight=-0.1653553715959565, enabled=False)
+	DefaultConnectionGene(key=(26778, 26290), weight=-0.1796812263971153, enabled=False)
+	DefaultConnectionGene(key=(26778, 26813), weight=0.9995893319750564, enabled=True)
+	DefaultConnectionGene(key=(26813, 26290), weight=-0.20424552399365742, enabled=True)

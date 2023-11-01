@@ -1,0 +1,1 @@
+Namespace(gens='1000', target_folder=None, load=None, config='/home/sondrhel/pureples/pureples/experiments/ready_go/config_iznn_neat_ready_go', hebbian_type='positive', binary_weights=False, firing_threshold=0.2, hebbian_learning_rate=0.05, experiment='12345-unordered', reset=False, suffix='', model='iznn', overwrite=False, end_test=False)
