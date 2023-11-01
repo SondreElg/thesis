@@ -405,6 +405,10 @@ class DefaultGenome(object):
         if in_node in config.output_keys and out_node in config.output_keys:
             return
 
+        # Don't allow connections directly from input to output nodes
+        if in_node in config.input_keys and out_node in config.output_keys:
+            return
+
         # No need to check for connections between input nodes:
         # they cannot be the output end of a connection (see above).
 

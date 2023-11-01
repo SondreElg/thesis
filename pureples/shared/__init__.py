@@ -8,7 +8,6 @@ from pureples.shared.gym_runner import (
 )
 from pureples.shared.visualize import (
     draw_net,
-    draw_net2,
     draw_pattern,
     draw_es,
     draw_hebbian,

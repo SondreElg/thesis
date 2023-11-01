@@ -16,7 +16,7 @@ import multiprocessing
 import numpy as np
 import shutil
 import pureples
-from pureples.shared.visualize import draw_net, draw_net2, draw_output, draw_hebbian
+from pureples.shared.visualize import draw_net, draw_output, draw_hebbian
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
@@ -107,7 +107,7 @@ elif args.model == "iznn":
 
 
 def run_rnn(
-    network,
+    genome,
     net,
     ready_go_data,
     verbose=False,
@@ -141,7 +141,7 @@ def run_rnn(
 
             if ready:
                 trial += 1
-            end_test = trials - trial > end_tests
+            end_test = trials - trial > 0
 
             # Do we really even need the Go signal?
             output = net.activate([ready, go], end_test)
@@ -170,6 +170,10 @@ def run_rnn(
             network_fitness.append([0.0])
 
         if visualize:
+            draw_hebbian(
+                net.hebbian_update_log,
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_hebbian.png",
+            )
             draw_output(
                 cycle_len,
                 np.array(inputs),
@@ -178,10 +182,11 @@ def run_rnn(
                 f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_outputs.png",
                 end_tests=end_tests,
                 all_outputs=all_outputs,
-            )
-            draw_hebbian(
-                net.hebbian_update_log,
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_hebbian.png",
+                network={
+                    "config": CONFIG,
+                    "genome": genome,
+                    "hebbians": net.hebbian_update_log,
+                },
             )
         verbose = False
         if print_fitness:
@@ -215,7 +220,7 @@ def compute_output_single(spike_timings):
 
 
 def run_iznn(
-    network,
+    genome,
     net,
     ready_go_data,
     verbose=False,
@@ -501,7 +506,7 @@ if __name__ == "__main__":
             NETWORK = HebbianRecurrentNetwork.create(WINNER, CONFIG)
             NETWORK.reset()
             WINNER.fitness = run_rnn(
-                None,
+                WINNER,
                 NETWORK,
                 test_set_expanded,
                 verbose=False,
@@ -514,7 +519,7 @@ if __name__ == "__main__":
             NETWORK = IZNN.create(WINNER, CONFIG)
             NETWORK.reset()
             WINNER.fitness = run_iznn(
-                None,
+                WINNER,
                 NETWORK,
                 test_set_expanded,
                 verbose=False,
@@ -573,7 +578,7 @@ if __name__ == "__main__":
 ###* Response factor and bias of nodes, weight and hebbian of connections at different timesteps
 ####^ Response factor and bias of nodes, weight
 #### Dotted line for connections with varying hebbian
-#### At different timesteps
+####^ At different timesteps
 ## Fitness of population over time
 ### Species over time?
 

@@ -17,7 +17,7 @@ class HebbianRecurrentNetwork(object):
         self.__firing_threshold = firing_threshold
 
         self.hebbian_buffer = {
-            node: {i[0]: i[2] for i in links}
+            node: {i[0]: i[2] for i in links if i[1] > 0}
             for node, ignored_activation, ignored_aggregation, ignored_bias, ignored_response, links, learning_rate in node_evals
         }
         self.hebbian_update_log = [[copy.deepcopy(self.hebbian_buffer)]]
@@ -45,7 +45,7 @@ class HebbianRecurrentNetwork(object):
     def reset(self):
         # print(f"reset: {self.values=}, {self.node_evals[0][5]=} {self.hebbian=}")
         self.hebbian_buffer = {
-            node: {i[0]: i[2] for i in links}
+            node: {i[0]: 0.0 for i in links if i[1] > 0}
             for node, ignored_activation, ignored_aggregation, ignored_bias, ignored_response, links, learning_rate in self.node_evals
         }
         self.values = [dict((k, 0.0) for k in v) for v in self.values]
@@ -111,17 +111,17 @@ class HebbianRecurrentNetwork(object):
                     #     ) * self.hebbian_buffer[node][i] + learning_rate * (
                     #         update_factor * input_val * output_val - self.__firing_threshold
                     #     )
-                if apply:
-                    h = max(
-                        min(
-                            self.hebbian_buffer[node][i],
-                            1,
-                        ),
-                        -1,
-                    )
-                    if abs(w) + h * response < 0:
-                        h += (abs(w) - h * response) / response
-                    self.hebbian_buffer[node][i] = h
+                    if apply:
+                        h = max(
+                            min(
+                                self.hebbian_buffer[node][i],
+                                1,
+                            ),
+                            -1,
+                        )
+                        if abs(w) + h * response < 0:
+                            h += (abs(w) - h * response) / response
+                        self.hebbian_buffer[node][i] = h
         if apply:
             self.hebbian_update_log.append([copy.deepcopy(self.hebbian_buffer)])
 
@@ -175,8 +175,7 @@ class HebbianRecurrentNetwork(object):
                 continue
 
             i, o = cg.key
-            # Last part technically breaks the no-direct clause, but may be kept depending on performance
-            if o not in required and i not in required or (i < 0 and o == 0):
+            if o not in required and i not in required:
                 continue
 
             weight = np.sign(cg.weight) if config.binary_weights else cg.weight
