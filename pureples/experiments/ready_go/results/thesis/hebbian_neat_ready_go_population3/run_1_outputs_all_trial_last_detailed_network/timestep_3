@@ -1,0 +1,152 @@
+digraph {
+	node [fontsize=9 height=0.10 shape=circle width=0.10]
+	"ready
+output 0.000" [fillcolor=yellow shape=box style=filled]
+	"go
+output 0.000" [fillcolor=green shape=box style=filled]
+	"output
+bias -0.016
+h_scaling 0.772
+output 0.004" [fillcolor=lightblue style=filled]
+	"key 38915
+bias -0.873
+h_scaling 0.519
+output 0.869" [fillcolor=white style=filled]
+	"key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" [fillcolor=white style=filled]
+	"key 218932
+bias -0.882
+h_scaling 0.760
+output 0.012" [fillcolor=white style=filled]
+	"key 24661
+bias -0.449
+h_scaling 0.317
+output 0.408" [fillcolor=white style=filled]
+	"key 2073
+bias -0.348
+h_scaling 0.680
+output 0.486" [fillcolor=white style=filled]
+	"key 2073
+bias -0.348
+h_scaling 0.680
+output 0.486" -> "output
+bias -0.016
+h_scaling 0.772
+output 0.004" [label=-1.000 color=blue fontsize=9 penwidth=3.1 style=solid]
+	"go
+output 0.000" -> "key 2073
+bias -0.348
+h_scaling 0.680
+output 0.486" [label=1.076 color=red fontsize=9 penwidth=1.7055679155089263 style=solid]
+	"key 2073
+bias -0.348
+h_scaling 0.680
+output 0.486" -> "key 2073
+bias -0.348
+h_scaling 0.680
+output 0.486" [label=0.761 color=red fontsize=9 penwidth=2.332619598779956 style=solid]
+	"key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" -> "output
+bias -0.016
+h_scaling 0.772
+output 0.004" [label=0.997 color=red fontsize=9 penwidth=3.1 style=solid]
+	"ready
+output 0.000" -> "key 24661
+bias -0.449
+h_scaling 0.317
+output 0.408" [label=1.241 color=red fontsize=9 penwidth=3.0690100127200517 style=solid]
+	"key 24661
+bias -0.449
+h_scaling 0.317
+output 0.408" -> "key 2073
+bias -0.348
+h_scaling 0.680
+output 0.486" [label=-0.205 color=blue fontsize=9 penwidth=0.714456081231235 style=solid]
+	"key 24661
+bias -0.449
+h_scaling 0.317
+output 0.408" -> "key 24661
+bias -0.449
+h_scaling 0.317
+output 0.408" [label=0.702 color=red fontsize=9 penwidth=2.1190412441314455 style=solid]
+	"go
+output 0.000" -> "key 38915
+bias -0.873
+h_scaling 0.519
+output 0.869" [label=0.928 color=red fontsize=9 penwidth=1.6483025290328963 style=solid]
+	"key 38915
+bias -0.873
+h_scaling 0.519
+output 0.869" -> "key 38915
+bias -0.873
+h_scaling 0.519
+output 0.869" [label=1.147 color=red fontsize=9 penwidth=3.1 style=solid]
+	"key 2073
+bias -0.348
+h_scaling 0.680
+output 0.486" -> "key 38915
+bias -0.873
+h_scaling 0.519
+output 0.869" [label=0.446 color=red fontsize=9 penwidth=1.4007433912200886 style=solid]
+	"key 38915
+bias -0.873
+h_scaling 0.519
+output 0.869" -> "output
+bias -0.016
+h_scaling 0.772
+output 0.004" [label=-0.871 color=blue fontsize=9 penwidth=2.713745070936477 style=solid]
+	"ready
+output 0.000" -> "key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" [label=0.650 color=red fontsize=9 penwidth=1.286147138094706 style=solid]
+	"output
+bias -0.016
+h_scaling 0.772
+output 0.004" -> "key 38915
+bias -0.873
+h_scaling 0.519
+output 0.869" [label=0.857 color=red fontsize=9 penwidth=2.4710263021805807 style=solid]
+	"key 24661
+bias -0.449
+h_scaling 0.317
+output 0.408" -> "key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" [label=0.376 color=red fontsize=9 penwidth=1.1401519794235906 style=solid]
+	"key 2073
+bias -0.348
+h_scaling 0.680
+output 0.486" -> "key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" [label=-1.000 color=blue fontsize=9 penwidth=3.1 style=solid]
+	"key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" -> "key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" [label=0.627 color=red fontsize=9 penwidth=1.9844553365789874 style=solid]
+	"go
+output 0.000" -> "key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" [label=-0.243 color=blue fontsize=9 penwidth=0.8283820183055283 style=solid]
+	"key 218932
+bias -0.882
+h_scaling 0.760
+output 0.012" -> "key 14003
+bias -0.030
+h_scaling 0.320
+output 0.264" [label=0.301 color=red fontsize=9 penwidth=1.003842955651335 style=solid]
+	"go
+output 0.000" -> "key 218932
+bias -0.882
+h_scaling 0.760
+output 0.012" [label=-0.137 color=blue fontsize=9 penwidth=0.5113778425855445 style=solid]
+}

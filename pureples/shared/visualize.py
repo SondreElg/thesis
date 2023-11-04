@@ -91,8 +91,6 @@ def draw_net(
         name = node_names.get(n, str(n))
         if detailed:
             node = genome.nodes[n]
-            print(f"{n=}")
-            print(f"{str(node)=}")
             name = f"key {name}\nbias {'%.3f' % node.bias}\nh_scaling {'%.3f' % node.response}"
             if node_outputs:
                 name = name + f"\noutput {'%.3f' % node_outputs[n]}"
@@ -227,6 +225,7 @@ def draw_es(id_to_coords, connections, filename):
         plt.plot(coord[0], coord[1], marker="o", markersize=3.0, color="grey")
 
     plt.grid()
+    plt.tight_layout()
     fig.savefig(filename, dpi=300)
 
 
@@ -243,11 +242,12 @@ def draw_hebbian(
     )
     df.to_csv(filename.split(".")[0] + ".csv")
     plt.plot(df)
-    plt.legend(df.columns, bbox_to_anchor=(1.04, 1), borderaxespad=0)
+    lgd = plt.legend(df.columns, bbox_to_anchor=(1.04, 1), borderaxespad=0)
     plt.xlabel("trial")
     plt.ylabel("magnitude")
     # plt.show()
-    fig.savefig(filename, dpi=300)
+    plt.tight_layout()
+    fig.savefig(filename, dpi=300, bbox_extra_artists=(lgd,), bbox_inches="tight")
     plt.close()
 
 
@@ -258,7 +258,7 @@ def draw_output(
     expected_output,
     filename,
     end_tests=0,
-    all_outputs=None,
+    all_outputs=[],
     network=None,
 ):
     df = pd.DataFrame(
@@ -275,10 +275,10 @@ def draw_output(
     split_output = np.array(np.split(network_output, indices), dtype=object)
 
     split_expected_output = np.array(
-        np.split(expected_output, indices)[:-4], dtype=object
+        np.split(expected_output, indices)[:-end_tests], dtype=object
     )
     split_expected_end_test_output = np.array(
-        np.split(expected_output, indices)[-4:], dtype=object
+        np.split(expected_output, indices)[-end_tests:], dtype=object
     )
 
     # Pad arrays
@@ -290,22 +290,23 @@ def draw_output(
     )
 
     # Calculate average for each timestep
-    expected_avg = np.average(split_expected_output[30:-4], axis=0)
-    avg = np.average(split_output[30:-4], axis=0)
+    expected_avg = np.average(split_expected_output[6:-end_tests], axis=0)
+    avg = np.average(split_output[6:-end_tests], axis=0)
     first = split_output[0]
-    trained = split_output[30]
-    last = split_output[len(indices)]
-    # max_out = np.max(split_output[30:-4], axis=0)
+    trained = split_output[6]
+    last = split_output[len(indices) - end_tests]
+    # max_out = np.max(split_output[30:-end_tests], axis=0)
     plt.plot(expected_avg, label="expected")
-    plt.plot(avg, label="actual")
+    plt.plot(avg, label="average")
     plt.plot(first, label="first")
     plt.plot(trained, label="trained")
     plt.plot(last, label="last")
     # plt.plot(max_out, label="maximum")
-    plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
+    lgd = plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
     plt.xlabel("timestep")
     plt.ylabel("magnitude")
-    fig.savefig(filename, dpi=300)
+    plt.tight_layout()
+    fig.savefig(filename, dpi=300, bbox_extra_artists=(lgd,), bbox_inches="tight")
     plt.close()
     if end_tests:
         end_test_set = split_output[-end_tests:]
@@ -315,19 +316,18 @@ def draw_output(
         # plt.plot(end_test_set[1], label="middle")
         # plt.plot(end_test_set[2], label="end")
         plt.plot(end_test_set[3], label="omission")
-        plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
+        lgd = plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
         plt.xlabel("timestep")
         plt.ylabel("output magnitude")
-
-        # combined = np.append([expected_avg], end_test_set, 0)
-        # print(combined)
-        # unlabeled = plt.plot(combined)
-        # plt.legend(unlabeled, ("expected avg", "first", "middle", "end", "none"))
-        # plt.show()
-        fig2.savefig(filename.split(".")[0] + "_end_tests.png", dpi=300)
+        fig2.savefig(
+            filename.split(".")[0] + "_end_tests.png",
+            dpi=300,
+            bbox_extra_artists=(lgd,),
+            bbox_inches="tight",
+        )
         plt.close()
-    if all_outputs:
-        df = pd.DataFrame(all_outputs)
+    if len(all_outputs):
+        df = pd.json_normalize(all_outputs)
         df.to_csv(filename.split(".")[0] + f"_all.csv")
         test_names = [
             "trial_last",
@@ -338,7 +338,7 @@ def draw_output(
             "trial_first",
         ]
         for test in range(end_tests + 2):
-            df = pd.DataFrame(
+            df = pd.json_normalize(
                 all_outputs[
                     indices[-(end_tests - test) - 1] : indices[-(end_tests - test)]
                     if end_tests - test
@@ -363,9 +363,14 @@ def draw_output(
                 color="grey",
             )
             plt.plot(df.iloc[:, 3:])
-            plt.legend(named_df.columns, bbox_to_anchor=(1.04, 1), borderaxespad=0)
+            lgd = plt.legend(
+                named_df.columns, bbox_to_anchor=(1.04, 1), borderaxespad=0
+            )
             fig3.savefig(
-                filename.split(".")[0] + f"_all_{test_names[test]}.png", dpi=300
+                filename.split(".")[0] + f"_all_{test_names[test]}.png",
+                dpi=300,
+                bbox_extra_artists=(lgd,),
+                bbox_inches="tight",
             )
             plt.close()
             if network and test_names[test] in [
@@ -385,10 +390,7 @@ def draw_output(
                         if test_names[test] == "trial_first"
                         else -1
                     )
-                    # print(network["hebbians"])
-                    # print(hebbian_trial_index)
                     for timestep in range(len(df.iloc[:, :])):
-                        # print(timestep)
                         draw_net(
                             network["config"],
                             network["genome"],

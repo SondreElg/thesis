@@ -1,3 +1,4 @@
+import copy
 import math
 import numpy as np
 
@@ -44,15 +45,11 @@ def ready_go_list(
             go = int(input == 2)
             state = 2 if go else 1 if (ready or state == 1) else 0
             ready = int(input == 1)
-            # net.reset()
 
             # if ready:
             #     predicted = False
             # elif state == 2:
             #     predicted = True
-
-            # Why does it activate multiple times?
-            # Does the recurrent network implementation progress one "layer" at a time?
 
             if state == 2:
                 expected_output.append(1)
@@ -72,8 +69,14 @@ def ready_go_list(
         generation_data.append([inputs, expected_output])
     # order = [0, 4, 2, 3, 1]
     # generation_data = np.array(generation_data)
-    np.random.shuffle(generation_data)
-    return generation_data
+
+    shuffled_data = copy.deepcopy(generation_data)
+    flipped_data = np.flip(generation_data, axis=0)
+    while np.array_equal(shuffled_data, generation_data) or np.array_equal(
+        shuffled_data, flipped_data
+    ):
+        np.random.shuffle(shuffled_data)
+    return shuffled_data
 
 
 def ready_go_list_zip(

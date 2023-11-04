@@ -117,21 +117,23 @@ def run_rnn(
     end_tests=0,
 ):
     print_fitness = verbose
-    network_fitness = []
+    network_fitness = np.array([])
 
     train_set = 0
 
-    for inputs, expected_output in ready_go_data:
+    training_data = np.append(
+        ready_go_data, np.flip(ready_go_data[:-1], axis=0), axis=0
+    )
+
+    for inputs, expected_output in training_data:
         trial = 0
         # trials = len(inputs)
-        outputs = []
-        all_outputs = []
+        outputs = np.array([])
+        all_outputs = np.empty_like(net.ovalues)
         train_set += 1
         last_fitness = 0.0
-        fitness = []
+        fitness = np.array([])
         steady = False
-        training_over = False
-        output = [0, 0]
         if args.reset:
             net.reset()
         for index, input in enumerate(inputs):
@@ -141,34 +143,18 @@ def run_rnn(
 
             if ready:
                 trial += 1
-            end_test = trials - trial > 0
+            training = trials - trial >= 0
 
             # Do we really even need the Go signal?
-            output = net.activate([ready, go], end_test)
+            output = net.activate([ready, go], training)
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
 
-            outputs.append(output[0])
-            all_outputs.append(copy.deepcopy(net.ovalues))
-            if not training_over and ready and index >= 30:
-                training_over = True
-            if training_over and not end_test:
-                if last_fitness != -1.0:
-                    fitness.append(last_fitness)
-            # if expected_output[0] < 0.1:
-            #     last_fitness = 0.0
-
-            if verbose and training_over:
-                print(
-                    " input {!r}, expected output {:.3f}, got {!r}".format(
-                        input, expected_output[index], output
-                    )
-                )
-        if fitness:
-            network_fitness.append(np.mean(fitness))
-        else:
-            network_fitness.append([0.0])
-
+            outputs = np.append(outputs, output[0])
+            all_outputs = np.append(all_outputs, copy.deepcopy(net.ovalues))
+            if trial >= 6 and training:
+                fitness = np.append(fitness, last_fitness)
+        network_fitness = np.append(network_fitness, np.mean(fitness))
         if visualize:
             draw_hebbian(
                 net.hebbian_update_log,
@@ -397,6 +383,19 @@ def run(*, gens, max_trials=1, initial_pop=None):
     # print(f"hebbian_neat_ready_go done")
     # winner_hundred = pop.run(pe.evaluate, gens)
     all_time_best = pop.reporters.reporters[0].best_genome()
+    pop.reporters.reporters[0].save_genome_fitness(
+        filename=f"pureples/experiments/ready_go/results/{folder_name}/pop_fitness_history.csv",
+        delimiter=",",
+    )
+    pop.reporters.reporters[0].save_species_count(
+        filename=f"pureples/experiments/ready_go/results/{folder_name}/pop_speciation_history.csv",
+        delimiter=",",
+    )
+    pop.reporters.reporters[0].save_species_fitness(
+        filename=f"pureples/experiments/ready_go/results/{folder_name}/pop_species_fitness_history.csv",
+        delimiter=",",
+        null_value=-1,
+    )
     return species_one, (stats_one), all_time_best  # , stats_ten, stats_hundred)
 
 

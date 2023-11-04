@@ -1,1 +1,0 @@
-Namespace(gens=1, target_folder='results', load=None, config='pureples/experiments/ready_go/config_iznn_neat_ready_go', abs=False, firing_threshold=0.2, hebbian_learning_rate=0.05)
