@@ -68,8 +68,7 @@ def ready_go_list(
 
         generation_data.append([inputs, expected_output])
     # order = [0, 4, 2, 3, 1]
-    # generation_data = np.array(generation_data)
-
+    generation_data = np.array(generation_data, dtype=object)
     shuffled_data = copy.deepcopy(generation_data)
     flipped_data = np.flip(generation_data, axis=0)
     while np.array_equal(shuffled_data, generation_data) or np.array_equal(

@@ -81,8 +81,8 @@ class HebbianRecurrentNetwork(object):
             link_buffer = []
             for i, w, h in links:
                 # This is ugly, and could be done much cleaner
-                input_val = self.ivalues[i]
-                output_val = self.ovalues[i]
+                input_val = self.ovalues[i]
+                output_val = self.ovalues[node]
                 # if w + response * hebbians[i] >= 0:
                 if w >= 0:
                     if (

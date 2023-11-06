@@ -157,7 +157,7 @@ def run_rnn(
         network_fitness = np.append(network_fitness, np.mean(fitness))
         if visualize:
             draw_hebbian(
-                net.hebbian_update_log,
+                net,
                 f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_hebbian.png",
             )
             draw_output(
@@ -479,18 +479,26 @@ if __name__ == "__main__":
         if not args.load
         else training_setup["function"](*training_setup["params"])
     )
-    test_set_expanded = copy.deepcopy(test_set)
+    test_set_expanded = np.asarray(test_set)
     end_tests = int(args.end_test)
     if end_tests:
-        for i in [0, cycle_len // 2, cycle_len - 1, -1]:
+        # end_tests += 1
+        for i in [-1]:
             for j in range(len(test_set)):
+                # test_set_expanded[j] = np.append(test_set_expanded[j], [1, 0], axis=0)
                 test_set_expanded[j][0].append(1)
                 test_set_expanded[j][1].append(0)
                 for k in range(max_trial_len - 1):
                     if i == k:
+                        # test_set_expanded[j] = np.append(
+                        #     test_set_expanded[j], [2, 1], axis=1
+                        # )
                         test_set_expanded[j][0].append(2)
                         test_set_expanded[j][1].append(1)
                     else:
+                        # test_set_expanded[j] = np.append(
+                        #     test_set_expanded[j], [0, 0], axis=1
+                        # )
                         test_set_expanded[j][0].append(0)
                         test_set_expanded[j][1].append(0)
 
@@ -573,13 +581,22 @@ if __name__ == "__main__":
 ##^ Output at start and end of each run
 ##^ Run omission tests (WITHOUT PLASTICITY)
 ##^ Both above -> ALL NODE OUTPUTS
+## Plot all omission trials to one plot
 ##* NETWORK
 ###* Response factor and bias of nodes, weight and hebbian of connections at different timesteps
 ####^ Response factor and bias of nodes, weight
 #### Dotted line for connections with varying hebbian
 ####^ At different timesteps
+### Standard deviation of hebbian for different connections
 ## Fitness of population over time
 ### Species over time?
+## Hebbian
+### Subplot for each source node
+#### INCLUDE MAGNITUDE FACTOR
+### Correlation of hebbian values and foreperiod
+#### NMF
+#### GLR
+#### GLM
 
 # Hebbian
 ## Make learning rate trainable
@@ -588,14 +605,33 @@ if __name__ == "__main__":
 # Experiments
 ## Focus on POSITIVE, WITH modulation
 ## Try weights up to 10 (to observe hebbian changes in a more fine-grained environment)
-## Implement the experiment from the Maes et al. 2020 paper
+## Ideas
+### Implement the experiment from the Maes et al. 2020 paper
+### Prior vs posterior probability (12345 vs regular)
+### Higher firing threshold
 
 # Thesis
 ## Have to explain HOW/WHY the networks form the topologies
 ### HOW is the information ENCODED?
 ### HOW does the networks LEARN?
 ## Evolution of the networks
+### Background theory
+#### Bayesian logic?
+## Research goals
+### "How can NEAT be used to evolve biologically plausible and interpretable neural networks capable of temporal prediction?"
+#### Very long. Too specific?
+### "How does RNNs encode prediction over time for temporal prediction tasks?"
+#### Very open-ended. Encode hazard function? -> Assumes hazard function will appear from the start
+### "How does Hebbian weights correlate to different foreperiods?"
+#### "How does Hebbian learning work" is already fairly well understood. Approach from another angle?
+## Compare model to another existing model
+### Ensure to communicate how your model is unique
+## Human model of Ready-Go
+
 
 # Next meeting
 ## Make list of potential figures
-##
+### Population/species fitness over time
+### Population/species size over time
+### Number of species over time
+### Network fitness per node/connection over time

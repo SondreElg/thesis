@@ -26,6 +26,7 @@ def draw_net(
     detailed=False,
     node_outputs=None,
     hebbians=None,
+    draw_std=False,
 ):
     """Receives a genome and draws a neural network with arbitrary topology."""
     # Attributes for network nodes.
@@ -108,7 +109,13 @@ def draw_net(
             style = "solid" if cg.enabled else "dotted"
             color = "red" if cg.weight > 0 else "blue"
             width = str(0.1 + abs(cg.weight * 3))
-            if hebbians:
+            if draw_std:
+                label = "{:.3f}".format(
+                    hebbians.get(output, {}).get(input, 0)
+                    * genome.nodes[output].response
+                    + cg.weight
+                )
+            elif hebbians:
                 label = "{:.3f}".format(
                     hebbians.get(output, {}).get(input, 0)
                     * genome.nodes[output].response
@@ -229,10 +236,27 @@ def draw_es(id_to_coords, connections, filename):
     fig.savefig(filename, dpi=300)
 
 
+def get_hebbian_std(hebbian, group_size=10):
+    df = pd.DataFrame(
+        [
+            {f"{k2}-{k}": v2 for d in i for k, v in d.items() for k2, v2 in v.items()}
+            for i in hebbian
+        ]
+    )
+    # Group by the computed indices and calculate the mean
+    if group_size:
+        indices_to_keep = [i for i in range(len(df)) if i % 100 >= group_size]
+        df = df.iloc[indices_to_keep]
+        group_indices = df.index // group_size
+    averaged_df = df.groupby(group_indices).mean()
+    return averaged_df.std()
+
+
 def draw_hebbian(
-    hebbian,
+    net,
     filename,
 ):
+    hebbian = net.hebbian_update_log
     fig = plt.figure()
     df = pd.DataFrame(
         [
@@ -241,6 +265,11 @@ def draw_hebbian(
         ]
     )
     df.to_csv(filename.split(".")[0] + ".csv")
+
+    std = get_hebbian_std(hebbian)
+    print(f"{std=}")
+    filtered_columns = std[std > 0.01].index
+    df = df[filtered_columns]
     plt.plot(df)
     lgd = plt.legend(df.columns, bbox_to_anchor=(1.04, 1), borderaxespad=0)
     plt.xlabel("trial")
@@ -295,12 +324,14 @@ def draw_output(
     first = split_output[0]
     trained = split_output[6]
     last = split_output[len(indices) - end_tests]
+    omission = split_output[len(indices)]
     # max_out = np.max(split_output[30:-end_tests], axis=0)
     plt.plot(expected_avg, label="expected")
     plt.plot(avg, label="average")
     plt.plot(first, label="first")
     plt.plot(trained, label="trained")
     plt.plot(last, label="last")
+    plt.plot(omission, label="omission")
     # plt.plot(max_out, label="maximum")
     lgd = plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
     plt.xlabel("timestep")
@@ -315,7 +346,7 @@ def draw_output(
         # plt.plot(end_test_set[0], label="first")
         # plt.plot(end_test_set[1], label="middle")
         # plt.plot(end_test_set[2], label="end")
-        plt.plot(end_test_set[3], label="omission")
+        plt.plot(end_test_set[0], label="omission")
         lgd = plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
         plt.xlabel("timestep")
         plt.ylabel("output magnitude")
@@ -331,11 +362,11 @@ def draw_output(
         df.to_csv(filename.split(".")[0] + f"_all.csv")
         test_names = [
             "trial_last",
+            "go_omitted",
+            "trial_first",
             "go_on_first",
             "go_on_middle",
             "go_on_end",
-            "go_omitted",
-            "trial_first",
         ]
         for test in range(end_tests + 2):
             df = pd.json_normalize(
@@ -376,7 +407,7 @@ def draw_output(
             if network and test_names[test] in [
                 "trial_last",
                 "trial_first",
-                # "go_omission",
+                "go_omission",
             ]:
                 try:
                     save_dir = (
