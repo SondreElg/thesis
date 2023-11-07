@@ -26,6 +26,7 @@ def draw_net(
     detailed=False,
     node_outputs=None,
     hebbians=None,
+    hebbian_trial_index=0,
     draw_std=False,
 ):
     """Receives a genome and draws a neural network with arbitrary topology."""
@@ -99,6 +100,9 @@ def draw_net(
         attrs = {"style": "filled", "fillcolor": node_colors.get(n, "white")}
         dot.node(name, _attributes=attrs)
 
+    if draw_std:
+        hebbian_std_df = get_hebbian_std(hebbian_to_dataframe(hebbians))
+
     for cg in genome.connections.values():
         if cg.enabled or show_disabled:
             # if cg.input not in used_nodes or cg.output not in used_nodes:
@@ -108,21 +112,27 @@ def draw_net(
             b = node_names.get(output, str(output))
             style = "solid" if cg.enabled else "dotted"
             color = "red" if cg.weight > 0 else "blue"
-            width = str(0.1 + abs(cg.weight * 3))
+            width = "0.1"
             if draw_std:
-                label = "{:.3f}".format(
-                    hebbians.get(output, {}).get(input, 0)
-                    * genome.nodes[output].response
-                    + cg.weight
-                )
+                connection_std = hebbian_std_df.loc[
+                    (hebbian_std_df["prior_node"] == int(input))
+                    & (hebbian_std_df["posterior_node"] == int(output))  # VERIFY ORDER
+                ]
+                if connection_std.empty:
+                    label = ""
+                else:
+                    std = connection_std.iloc[0]["std"]
+                    label = "{:.3f}".format(std)
+                    width = str(0.1 + abs(std * 30))
             elif hebbians:
                 label = "{:.3f}".format(
-                    hebbians.get(output, {}).get(input, 0)
+                    hebbians[hebbian_trial_index][0].get(output, {}).get(input, 0)
                     * genome.nodes[output].response
                     + cg.weight
                 )
             else:
-                label = ""
+                label = "{:.3f}".format(cg.weight)
+                width = str(0.1 + abs(cg.weight * 3))
             dot.edge(
                 a,
                 b,
@@ -236,47 +246,119 @@ def draw_es(id_to_coords, connections, filename):
     fig.savefig(filename, dpi=300)
 
 
-def get_hebbian_std(hebbian, group_size=10):
-    df = pd.DataFrame(
-        [
-            {f"{k2}-{k}": v2 for d in i for k, v in d.items() for k2, v2 in v.items()}
-            for i in hebbian
-        ]
+# Function to divide the groups into chunks of size n and calculate the mean
+def chunked_mean(group, chunk_size):
+    # indices_to_keep = [i for i in range(len(group)) if i % 100 >= chunk_size]
+    # # Calculate the number of chunks
+    # group = group.iloc[indices_to_keep]
+    num_chunks = len(group) // chunk_size
+    # Reshape the array into num_chunks of chunk_size and calculate the mean of each
+    return pd.Series(
+        group[: num_chunks * chunk_size].values.reshape(-1, chunk_size).mean(axis=1)
     )
-    # Group by the computed indices and calculate the mean
-    if group_size:
-        indices_to_keep = [i for i in range(len(df)) if i % 100 >= group_size]
-        df = df.iloc[indices_to_keep]
-        group_indices = df.index // group_size
-    averaged_df = df.groupby(group_indices).mean()
-    return averaged_df.std()
+
+
+def get_hebbian_std(hebbian, group_size=10):
+    std_data = []
+    for (prior, posterior), group in hebbian.groupby(["prior_node", "posterior_node"]):
+        chunk_means = chunked_mean(group["weight"], group_size)
+        std_data.append(
+            {
+                "prior_node": prior,
+                "posterior_node": posterior,
+                "std": chunk_means.std(),
+            }
+        )
+
+    return pd.DataFrame(std_data)
+
+
+def hebbian_to_dataframe(hebbian):
+    flattened_data = []
+    for trial_index, trial in enumerate(hebbian):
+        for node_dict in trial:
+            for posterior_node, weights_dict in node_dict.items():
+                for prior_node, weight in weights_dict.items():
+                    flattened_data.append(
+                        {
+                            "trial": trial_index,  # Trial index
+                            "prior_node": prior_node,
+                            "posterior_node": posterior_node,
+                            "weight": weight,
+                        }
+                    )
+
+    return pd.DataFrame(flattened_data)
 
 
 def draw_hebbian(
     net,
     filename,
+    node_names=None,
 ):
     hebbian = net.hebbian_update_log
     fig = plt.figure()
-    df = pd.DataFrame(
-        [
-            {f"{k2}-{k}": v2 for d in i for k, v in d.items() for k2, v2 in v.items()}
-            for i in hebbian
-        ]
+
+    df = hebbian_to_dataframe(hebbian)
+    df.to_csv(filename.split(".")[0] + ".csv")
+
+    std = get_hebbian_std(df)
+    # std.to_csv(filename.split(".")[0] + ".csv")
+    filtered_columns = std[std["std"] > 0.001][["prior_node", "posterior_node"]]
+    df = pd.merge(
+        df, filtered_columns, on=["prior_node", "posterior_node"], how="inner"
+    )
+    node_df = pd.DataFrame(
+        [(t, 0.0) for t in net.input_nodes] + [(t[0], t[4]) for t in net.node_evals],
+        columns=["node", "response"],
     )
     df.to_csv(filename.split(".")[0] + ".csv")
 
-    std = get_hebbian_std(hebbian)
-    print(f"{std=}")
-    filtered_columns = std[std > 0.01].index
-    df = df[filtered_columns]
-    plt.plot(df)
-    lgd = plt.legend(df.columns, bbox_to_anchor=(1.04, 1), borderaxespad=0)
-    plt.xlabel("trial")
-    plt.ylabel("magnitude")
-    # plt.show()
+    # Calculate the number of rows needed for a 3-column layout
+    num_nodes = len(node_df)
+    num_rows = (
+        num_nodes + 2
+    ) // 3  # Add 2 to ensure that we have enough rows for all nodes
+    # Create subplots in a 3xN grid
+    fig, axes = plt.subplots(
+        num_rows, 3, figsize=(15, num_rows * 5)
+    )  # Adjust the figsize as necessary
+    plt.setp(axes, ylim=(0, 1))
+
+    # Flatten the axes array for easy iteration
+    axes = axes.flatten()
+    outgoing_nodes = df["prior_node"].unique()
+    for idx, node in node_df.iterrows():
+        # Plot each node in its respective subplot
+        # axes[idx].plot(df.index, node_df[node], label=node)
+        current_node = int(node["node"])
+        if current_node in outgoing_nodes:
+            axes[idx].set_title(
+                node_names[current_node]
+                if current_node in node_names
+                else f"Node {current_node}"
+            )
+            axes[idx].set_xlabel("Trial")
+            axes[idx].set_ylabel("Magnitude")
+            to_plot = df[df["prior_node"] == current_node].reset_index(drop=True)
+            # to_plot.to_csv(filename.split(".")[0] + ".csv")
+            for posterior, group in to_plot.groupby(["posterior_node"]):
+                axes[idx].plot(
+                    group["trial"],
+                    group["weight"]
+                    * node_df[node_df["node"] == posterior]
+                    .reset_index(drop=True)
+                    .at[0, "response"],
+                    label=posterior,
+                )
+            axes[idx].legend(loc="upper right")
+
+    # If there are any empty subplots, turn them off
+    for ax in axes[num_nodes:]:
+        ax.axis("off")
+
     plt.tight_layout()
-    fig.savefig(filename, dpi=300, bbox_extra_artists=(lgd,), bbox_inches="tight")
+    fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close()
 
 
@@ -289,6 +371,7 @@ def draw_output(
     end_tests=0,
     all_outputs=[],
     network=None,
+    draw_std=False,
 ):
     df = pd.DataFrame(
         {
@@ -324,7 +407,7 @@ def draw_output(
     first = split_output[0]
     trained = split_output[6]
     last = split_output[len(indices) - end_tests]
-    omission = split_output[len(indices)]
+    omission = split_output[len(indices) - 1]
     # max_out = np.max(split_output[30:-end_tests], axis=0)
     plt.plot(expected_avg, label="expected")
     plt.plot(avg, label="average")
@@ -340,7 +423,7 @@ def draw_output(
     fig.savefig(filename, dpi=300, bbox_extra_artists=(lgd,), bbox_inches="tight")
     plt.close()
     if end_tests:
-        end_test_set = split_output[-end_tests:]
+        end_test_set = split_output[-end_tests:-1]
         fig2 = plt.figure()
         plt.plot(expected_avg, label="expected_avg")
         # plt.plot(end_test_set[0], label="first")
@@ -357,25 +440,55 @@ def draw_output(
             bbox_inches="tight",
         )
         plt.close()
+    if draw_std:
+        draw_net(
+            network["config"],
+            network["genome"],
+            detailed=True,
+            filename=filename.split(".")[0] + "_hebbian_std_network.png",
+            hebbians=network["hebbians"],
+            node_names={
+                -1: "ready",
+                -2: "go",
+                0: "output",
+                # 1: "output2",
+            },
+            node_colors={
+                -1: "yellow",
+                -2: "green",
+                0: "lightblue",
+                # 1: "lightblue",
+            },
+            prune_unused=True,
+            draw_std=draw_std,
+        )
     if len(all_outputs):
-        df = pd.json_normalize(all_outputs)
+        # df = pd.json_normalize(all_outputs)
         df.to_csv(filename.split(".")[0] + f"_all.csv")
         test_names = [
             "trial_last",
             "go_omitted",
+            "normalizing_trial",
             "trial_first",
+            "trial_second",
+            "trial_third",
             "go_on_first",
             "go_on_middle",
             "go_on_end",
         ]
-        for test in range(end_tests + 2):
-            df = pd.json_normalize(
-                all_outputs[
-                    indices[-(end_tests - test) - 1] : indices[-(end_tests - test)]
-                    if end_tests - test
-                    else None
-                ]
-            )
+        indices_from_zero = np.append(0, indices)
+        for test in range(end_tests + 4):
+            indice_index = -(end_tests - test) - 1
+            start = indices_from_zero[indice_index]
+            end = indices_from_zero[indice_index + 1] if end_tests - test else None
+            df = pd.json_normalize(all_outputs[start:end])
+            print("test ", test)
+            print("end_tests ", end_tests)
+            print("indices_from_zero ", indices_from_zero)
+            print(indices_from_zero[indice_index])
+            print("start ", start)
+            print("end ", end)
+            print(df)
             named_df = df.rename(columns={"-2": "ready", "-1": "go", "0": "output"})
             fig3 = plt.figure()
             plt.plot(
@@ -407,47 +520,48 @@ def draw_output(
             if network and test_names[test] in [
                 "trial_last",
                 "trial_first",
-                "go_omission",
+                "go_omitted",
             ]:
-                try:
-                    save_dir = (
-                        filename.split(".")[0]
-                        + f"_all_{test_names[test]}_detailed_network/"
+                # try:
+                save_dir = (
+                    filename.split(".")[0]
+                    + f"_all_{test_names[test]}_detailed_network/"
+                )
+                if not os.path.exists(save_dir):
+                    os.mkdir(save_dir)
+                hebbian_trial_index = (
+                    len(network["hebbians"]) - len(indices_from_zero)
+                    if test_names[test] == "trial_first"
+                    else -1
+                )
+                for timestep in range(len(df.iloc[:, :])):
+                    draw_net(
+                        network["config"],
+                        network["genome"],
+                        filename=save_dir + f"timestep_{timestep}",
+                        hebbians=network["hebbians"],
+                        hebbian_trial_index=hebbian_trial_index,
+                        node_outputs=df.iloc[timestep, :].to_dict(),
+                        node_names={
+                            -1: "ready",
+                            -2: "go",
+                            0: "output",
+                            # 1: "output2",
+                        },
+                        node_colors={
+                            -1: "yellow",
+                            -2: "green",
+                            0: "lightblue",
+                            # 1: "lightblue",
+                        },
+                        prune_unused=True,
+                        detailed=True,
                     )
-                    if not os.path.exists(save_dir):
-                        os.mkdir(save_dir)
-                    hebbian_trial_index = (
-                        len(network["hebbians"]) - len(indices + 1)
-                        if test_names[test] == "trial_first"
-                        else -1
-                    )
-                    for timestep in range(len(df.iloc[:, :])):
-                        draw_net(
-                            network["config"],
-                            network["genome"],
-                            filename=save_dir + f"timestep_{timestep}",
-                            hebbians=network["hebbians"][hebbian_trial_index][0],
-                            node_outputs=df.iloc[timestep, :].to_dict(),
-                            node_names={
-                                -1: "ready",
-                                -2: "go",
-                                0: "output",
-                                # 1: "output2",
-                            },
-                            node_colors={
-                                -1: "yellow",
-                                -2: "green",
-                                0: "lightblue",
-                                # 1: "lightblue",
-                            },
-                            prune_unused=True,
-                            detailed=True,
-                        )
-                except Exception as error:
-                    print(f"Error: {error}")
-                    print(
-                        f"########\nDrawing detailed network of {filename} failed\n########\n{df=}"
-                    )
+                # except Exception as error:
+                #     print(f"Error: {error}")
+                #     print(
+                #         f"########\nDrawing detailed network of {filename} failed\n########\n{df=}"
+                #     )
     return
 
 

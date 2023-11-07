@@ -16,7 +16,12 @@ import multiprocessing
 import numpy as np
 import shutil
 import pureples
-from pureples.shared.visualize import draw_net, draw_output, draw_hebbian
+from pureples.shared.visualize import (
+    draw_net,
+    draw_output,
+    draw_hebbian,
+    draw_omission_trials,
+)
 from pureples.shared.ready_go import ready_go_list
 from pureples.shared.population_plus import Population
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
@@ -46,7 +51,7 @@ parser.add_argument("--end_test", default=False)
 args = parser.parse_args()
 
 foreperiod = 25
-trials = 100
+trials = 50
 time_block_size = 5
 cycle_delay_range = [0, 3]
 cycle_len = math.floor(foreperiod / time_block_size)
@@ -110,29 +115,25 @@ def run_rnn(
     genome,
     net,
     ready_go_data,
-    verbose=False,
     visualize="",
     cycle_len=0,
     key=None,
     end_tests=0,
 ):
-    print_fitness = verbose
-    network_fitness = np.array([])
+    block = 0
+    blocks = len(ready_go_data)
 
-    train_set = 0
+    network_fitness = np.empty((blocks, 1))
+    omission_trial_outputs = np.empty((blocks, 1))
+    foreperiods = np.empty((blocks, 1))
 
-    training_data = np.append(
-        ready_go_data, np.flip(ready_go_data[:-1], axis=0), axis=0
-    )
-
-    for inputs, expected_output in training_data:
+    for inputs, expected_output in ready_go_data:
         trial = 0
-        # trials = len(inputs)
-        outputs = np.array([])
-        all_outputs = np.empty_like(net.ovalues)
-        train_set += 1
+        timesteps = len(inputs)
+        outputs = np.empty((timesteps, 1))
+        all_outputs = np.empty((timesteps, 1), dict)
+        fitness = np.empty((timesteps, 1))
         last_fitness = 0.0
-        fitness = np.array([])
         steady = False
         if args.reset:
             net.reset()
@@ -150,22 +151,33 @@ def run_rnn(
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
 
-            outputs = np.append(outputs, output[0])
-            all_outputs = np.append(all_outputs, copy.deepcopy(net.ovalues))
+            outputs[index] = output[0]
+            all_outputs[index] = copy.deepcopy(net.ovalues)
             if trial >= 6 and training:
-                fitness = np.append(fitness, last_fitness)
-        network_fitness = np.append(network_fitness, np.mean(fitness))
+                fitness[index] = last_fitness
+        network_fitness[block] = np.mean(fitness)
         if visualize:
+            foreperiod = inputs.index(2)
+            foreperiods[block] = foreperiod
+            indices = np.where(inputs == 1)
+            omission_trial_outputs[block] = outputs[
+                indices[-end_tests] : indices[-end_tests + 1]
+            ]
             draw_hebbian(
                 net,
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_hebbian.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{block}_fp{foreperiod}_hebbian.png",
+                node_names={
+                    -1: "ready",
+                    -2: "go",
+                    0: "output",
+                },
             )
             draw_output(
                 cycle_len,
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_outputs.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{block}_fp{foreperiod}_outputs.png",
                 end_tests=end_tests,
                 all_outputs=all_outputs,
                 network={
@@ -173,12 +185,11 @@ def run_rnn(
                     "genome": genome,
                     "hebbians": net.hebbian_update_log,
                 },
+                draw_std=True,
             )
-        verbose = False
-        if print_fitness:
-            print(net.node_evals)
-    if print_fitness:
-        print(network_fitness)
+        block += 1
+    if visualize:
+        draw_omission_trials(omission_trial_outputs[:5], foreperiods)
     return np.mean(network_fitness)
 
 
@@ -209,21 +220,19 @@ def run_iznn(
     genome,
     net,
     ready_go_data,
-    verbose=False,
     visualize="",
     cycle_len=0,
     key=None,
     end_test=False,
 ):
-    print_fitness = verbose
     network_fitness = []
     dt = net.get_time_step_msec()
     max_time_msec = 11
 
-    train_set = 0
+    block = 0
     for inputs, expected_output in ready_go_data:
         outputs = []
-        train_set += 1
+        block += 1
         trial = 0
         last_fitness = 0.0
         fitness = []
@@ -277,12 +286,6 @@ def run_iznn(
             # if expected_output[0] < 0.1:
             #     last_fitness = 0.0
 
-            if verbose and training_over:
-                print(
-                    " input {!r}, expected output {:.3f}, got {!r}".format(
-                        input, expected_output[index], output
-                    )
-                )
         if fitness:
             network_fitness.append(np.mean(fitness))
         else:
@@ -294,18 +297,13 @@ def run_iznn(
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_outputs.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{block}_outputs.png",
                 end_test=end_test,
             )
             draw_hebbian(
                 net.hebbian_update_log,
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{train_set}_hebbian.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{block}_hebbian.png",
             )
-        verbose = False
-        if print_fitness:
-            print(net.node_evals)
-    if print_fitness:
-        print(network_fitness)
     return np.mean(network_fitness)
 
 
@@ -319,12 +317,12 @@ def _eval_fitness(genome, config):
         network = HebbianRecurrentNetwork.create(genome, config)
 
         # genome fitness
-        return run_rnn(None, network, config.train_set)
+        return run_rnn(None, network, config.block)
     elif args.model == "iznn":
         network = IZNN.create(genome, config)
 
         # genome fitness
-        return run_iznn(None, network, config.train_set)
+        return run_iznn(None, network, config.block)
 
 
 def eval_fitness(genomes, config):
@@ -444,7 +442,12 @@ if __name__ == "__main__":
 
     save_dir = os.path.join(os.path.dirname(__file__), f"results/{folder_name}")
     similar_run = 0
-    while os.path.exists(save_dir) and not args.overwrite:
+    if args.overwrite:
+        for root, dirs, files in os.walk(save_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                os.remove(file_path)
+    while os.path.exists(save_dir):
         similar_run += 1
         save_dir = save_dir.split("__")[0] + "__" + str(similar_run)
     if not os.path.exists(save_dir):
@@ -482,9 +485,10 @@ if __name__ == "__main__":
     test_set_expanded = np.asarray(test_set)
     end_tests = int(args.end_test)
     if end_tests:
-        # end_tests += 1
-        for i in [-1]:
-            for j in range(len(test_set)):
+        end_tests += 1
+        for j in range(len(test_set)):
+            foreperiod = test_set[j][0].index(2)
+            for i in [-1, foreperiod]:
                 # test_set_expanded[j] = np.append(test_set_expanded[j], [1, 0], axis=0)
                 test_set_expanded[j][0].append(1)
                 test_set_expanded[j][1].append(0)
@@ -516,7 +520,6 @@ if __name__ == "__main__":
                 WINNER,
                 NETWORK,
                 test_set_expanded,
-                verbose=False,
                 visualize=f"population{count}_all",
                 cycle_len=max_trial_len,  # Assume cycle_len is same/larger for last dist
                 key=count,
@@ -529,7 +532,6 @@ if __name__ == "__main__":
                 WINNER,
                 NETWORK,
                 test_set_expanded,
-                verbose=False,
                 visualize=f"population{count}_all",
                 cycle_len=max_trial_len,
                 key=count,
@@ -583,16 +585,17 @@ if __name__ == "__main__":
 ##^ Both above -> ALL NODE OUTPUTS
 ## Plot all omission trials to one plot
 ##* NETWORK
-###* Response factor and bias of nodes, weight and hebbian of connections at different timesteps
+###^ Response factor and bias of nodes, weight and hebbian of connections at different timesteps
 ####^ Response factor and bias of nodes, weight
 #### Dotted line for connections with varying hebbian
 ####^ At different timesteps
-### Standard deviation of hebbian for different connections
+###^ Standard deviation of hebbian for different connections
 ## Fitness of population over time
 ### Species over time?
-## Hebbian
-### Subplot for each source node
-#### INCLUDE MAGNITUDE FACTOR
+##* Hebbian
+###^ Subplot for each source node
+####^ INCLUDE MAGNITUDE FACTOR
+##### (Included for hebbian plot, but not for std calculations. Should it be?)
 ### Correlation of hebbian values and foreperiod
 #### NMF
 #### GLR

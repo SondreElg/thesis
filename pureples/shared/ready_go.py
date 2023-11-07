@@ -10,13 +10,14 @@ def ready_go_list(
     cycle_delay_range=[0, 6],
     distributions=[],
     distributions_args=[{}],
-    trials=1,
+    flip_pad=False,
+    repetitions=1,
 ):
     """Returns a list of inputs representing the ready-go sequence with delays between each cycle"""
     generation_data = []
 
     cycle_len = math.floor(foreperiod / time_block_size)
-    for i in range(trials * len(distributions)):
+    for i in range(repetitions * len(distributions)):
         inputs = []
         dist_index = i % len(distributions)
         for _ in range(cycles):
@@ -75,6 +76,10 @@ def ready_go_list(
         shuffled_data, flipped_data
     ):
         np.random.shuffle(shuffled_data)
+    if flip_pad:
+        shuffled_data = np.append(
+            shuffled_data, np.flip(shuffled_data[:-1], axis=0), axis=0
+        )
     return shuffled_data
 
 
@@ -85,13 +90,13 @@ def ready_go_list_zip(
     cycle_delay_range=[0, 1],
     distributions=[],
     distributions_args=[{}],
-    trials=1,
+    repetitions=1,
 ):
     """Returns a list of inputs representing the ready-go sequence with delays between each cycle"""
     generation_data = []
 
     cycle_len = math.floor(foreperiod / time_block_size)
-    for _ in range(trials):
+    for _ in range(repetitions):
         inputs = []
         for j in range(cycles):
             dist_index = j % len(distributions)
@@ -150,7 +155,7 @@ def ready_go_list_zip(
 
 
 def old_ready_go_list(
-    foreperiod, cycles, time_block_size=None, cycle_delay_range=[0, 1], trials=1
+    foreperiod, cycles, time_block_size=None, cycle_delay_range=[0, 1], repetitions=1
 ):
     """Returns a list of inputs representing the ready-go sequence with delays between each cycle"""
 
@@ -161,7 +166,7 @@ def old_ready_go_list(
     #     return
     generation_data = []
 
-    for _ in range(trials):
+    for _ in range(repetitions):
         cycle_len = math.floor(np.random.choice(foreperiod) / time_block_size)
         inputs = np.hstack(
             [
