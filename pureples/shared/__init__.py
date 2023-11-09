@@ -15,7 +15,11 @@ from pureples.shared.visualize import (
 from pureples.shared.substrate import Substrate
 from pureples.shared.concurrent_neat_population import Population
 from pureples.shared.population_plus import Population
-from pureples.shared.ready_go import ready_go_list, ready_go_list_zip
+from pureples.shared.ready_go import (
+    ready_go_list,
+    ready_go_list_zip,
+    foreperiod_rg_list,
+)
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
 from pureples.shared.no_direct_rnn import RecurrentNetwork
 from pureples.shared.distributions import bimodal

@@ -13,6 +13,7 @@ import argparse
 import neat
 import neat.nn
 import multiprocessing
+import json
 import numpy as np
 import shutil
 import pureples
@@ -22,7 +23,7 @@ from pureples.shared.visualize import (
     draw_hebbian,
     draw_omission_trials,
 )
-from pureples.shared.ready_go import ready_go_list
+from pureples.shared.ready_go import ready_go_list, foreperiod_rg_list
 from pureples.shared.population_plus import Population
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
 from pureples.shared.distributions import bimodal
@@ -48,46 +49,50 @@ parser.add_argument("--suffix", default="")
 parser.add_argument("--model", default="rnn", choices=["rnn", "iznn"])
 parser.add_argument("--overwrite", default=False)
 parser.add_argument("--end_test", default=False)
+parser.add_argument("--flip_pad_data", default=True)
+parser.add_argument("--trial_delay_range", default="[0, 3]")
 args = parser.parse_args()
 
 foreperiod = 25
 trials = 50
 time_block_size = 5
-cycle_delay_range = [0, 3]
+cycle_delay_range = json.loads(args.trial_delay_range)
 cycle_len = math.floor(foreperiod / time_block_size)
 # identity_func = lambda x: x
 training_setup = {
-    "function": ready_go_list,
+    "function": foreperiod_rg_list,
     "params": [
         foreperiod,
         trials,
         time_block_size,
         cycle_delay_range,
-        [
-            # np.random.normal,
-            # np.random.triangular,
-            # np.random.triangular,
-            # bimodal,
-            np.random.normal,
-            np.random.normal,
-            np.random.normal,
-            np.random.normal,
-            np.random.normal,
-        ],
-        [
-            # {"loc": math.floor(cycle_len / 2), "scale": cycle_len / 4},
-            # {"left": 0, "mode": cycle_len, "right": cycle_len},
-            # {"left": 0, "mode": 0, "right": cycle_len},
-            # {
-            #     "loc": [math.floor(cycle_len / 4), math.ceil(cycle_len * 3 / 4)],
-            #     "scale": [cycle_len / 8, cycle_len / 8],
-            # },
-            {"loc": 0, "scale": 0},
-            {"loc": 1, "scale": 0},
-            {"loc": 2, "scale": 0},
-            {"loc": 3, "scale": 0},
-            {"loc": 4, "scale": 0},
-        ],
+        [1, 2, 3, 4, 5],
+        # [
+        #     # np.random.normal,
+        #     # np.random.triangular,
+        #     # np.random.triangular,
+        #     # bimodal,
+        #     np.random.normal,
+        #     np.random.normal,
+        #     np.random.normal,
+        #     np.random.normal,
+        #     np.random.normal,
+        # ],
+        # [
+        #     # {"loc": math.floor(cycle_len / 2), "scale": cycle_len / 4},
+        #     # {"left": 0, "mode": cycle_len, "right": cycle_len},
+        #     # {"left": 0, "mode": 0, "right": cycle_len},
+        #     # {
+        #     #     "loc": [math.floor(cycle_len / 4), math.ceil(cycle_len * 3 / 4)],
+        #     #     "scale": [cycle_len / 8, cycle_len / 8],
+        #     # },
+        #     {"loc": 1, "scale": 0},
+        #     {"loc": 2, "scale": 0},
+        #     {"loc": 3, "scale": 0},
+        #     {"loc": 4, "scale": 0},
+        #     {"loc": 5, "scale": 0},
+        # ],
+        args.flip_pad_data,
     ],
 }
 
@@ -123,18 +128,20 @@ def run_rnn(
     block = 0
     blocks = len(ready_go_data)
 
-    network_fitness = np.empty((blocks, 1))
-    omission_trial_outputs = np.empty((blocks, 1))
-    foreperiods = np.empty((blocks, 1))
+    network_fitness = np.empty((blocks))
+    omission_trial_outputs = np.empty((blocks, max_trial_len), dtype=object)
+    foreperiods = np.empty((blocks), dtype=int)
 
     for inputs, expected_output in ready_go_data:
         trial = 0
         timesteps = len(inputs)
-        outputs = np.empty((timesteps, 1))
-        all_outputs = np.empty((timesteps, 1), dict)
-        fitness = np.empty((timesteps, 1))
+        outputs = np.empty(timesteps)
+        all_outputs = np.empty(timesteps, dict)
+        fitness = np.empty(timesteps)
+        fitness.fill(np.nan)
         last_fitness = 0.0
         steady = False
+        network = net
         if args.reset:
             net.reset()
         for index, input in enumerate(inputs):
@@ -145,27 +152,28 @@ def run_rnn(
             if ready:
                 trial += 1
             training = trials - trial >= 0
+            if training == -1:
+                network = copy.deepcopy(net)
 
-            # Do we really even need the Go signal?
-            output = net.activate([ready, go], training)
+            output = network.activate([ready, go], training)
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
-
             outputs[index] = output[0]
-            all_outputs[index] = copy.deepcopy(net.ovalues)
+            all_outputs[index] = copy.deepcopy(network.ovalues)
             if trial >= 6 and training:
                 fitness[index] = last_fitness
-        network_fitness[block] = np.mean(fitness)
+        network_fitness[block] = np.nanmean(fitness)
         if visualize:
-            foreperiod = inputs.index(2)
-            foreperiods[block] = foreperiod
-            indices = np.where(inputs == 1)
-            omission_trial_outputs[block] = outputs[
-                indices[-end_tests] : indices[-end_tests + 1]
-            ]
+            foreperiod = np.where(np.array(inputs) == 2)[0][0]
+            foreperiods[block] = foreperiod - 1
+            if end_tests:
+                indices = np.asarray(np.where(np.array(inputs) == 1))[0]
+                omission_trial_outputs[block] = outputs[
+                    indices[-end_tests] : indices[-end_tests + 1]
+                ]
             draw_hebbian(
                 net,
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{block}_fp{foreperiod}_hebbian.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/block{block+1}_fp{foreperiod}_hebbian.png",
                 node_names={
                     -1: "ready",
                     -2: "go",
@@ -177,7 +185,7 @@ def run_rnn(
                 np.array(inputs),
                 np.array(outputs),
                 np.array(expected_output),
-                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/run_{block}_fp{foreperiod}_outputs.png",
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/block{block+1}_fp{foreperiod}_outputs.png",
                 end_tests=end_tests,
                 all_outputs=all_outputs,
                 network={
@@ -188,8 +196,12 @@ def run_rnn(
                 draw_std=True,
             )
         block += 1
-    if visualize:
-        draw_omission_trials(omission_trial_outputs[:5], foreperiods)
+    if visualize and end_tests:
+        blocks_of_interest = 1 + blocks // 2 if args.flip_pad_data else blocks
+        draw_omission_trials(
+            omission_trial_outputs[np.argsort(foreperiods[:blocks_of_interest])],
+            f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/omission_trials.png",
+        )
     return np.mean(network_fitness)
 
 
@@ -257,7 +269,6 @@ def run_iznn(
             spike_timings = []
             for j in range(num_steps):
                 t = dt * j
-                # Do we really even need the Go signal?
                 output = net.advance(dt)
 
                 # Capture the time and neuron membrane potential for later use if desired.
@@ -283,8 +294,6 @@ def run_iznn(
             if training_over:
                 if last_fitness != -1.0:
                     fitness.append(last_fitness)
-            # if expected_output[0] < 0.1:
-            #     last_fitness = 0.0
 
         if fitness:
             network_fitness.append(np.mean(fitness))
@@ -317,12 +326,12 @@ def _eval_fitness(genome, config):
         network = HebbianRecurrentNetwork.create(genome, config)
 
         # genome fitness
-        return run_rnn(None, network, config.block)
+        return run_rnn(None, network, config.train_set)
     elif args.model == "iznn":
         network = IZNN.create(genome, config)
 
         # genome fitness
-        return run_iznn(None, network, config.block)
+        return run_iznn(None, network, config.train_set)
 
 
 def eval_fitness(genomes, config):
@@ -365,21 +374,6 @@ def run(*, gens, max_trials=1, initial_pop=None):
     pe = neat.ParallelEvaluator(16, _eval_fitness)
     species_one = pop.run(pe.evaluate, gens)
 
-    # print("Second run")
-    # setattr(CONFIG, "trials", distributions)
-    # stats_ten = neat.StatisticsReporter()
-    # pop = ini_pop((pop.population, pop.species, 0), CONFIG, stats_ten)
-    # winner_ten = pop.run(pe.evaluate, gens)
-
-    # if max_trials == 0:
-    #     return winner_ten, (stats_one, stats_ten)
-
-    # print("Third run")
-    # setattr(CONFIG, "trials", max_trials * distributions)
-    # stats_hundred = neat.StatisticsReporter()
-    # pop = ini_pop((pop.population, pop.species, 0), CONFIG, stats_hundred)
-    # print(f"hebbian_neat_ready_go done")
-    # winner_hundred = pop.run(pe.evaluate, gens)
     all_time_best = pop.reporters.reporters[0].best_genome()
     pop.reporters.reporters[0].save_genome_fitness(
         filename=f"pureples/experiments/ready_go/results/{folder_name}/pop_fitness_history.csv",
@@ -426,6 +420,7 @@ if __name__ == "__main__":
     setattr(CONFIG, "binary_weights", bool(args.binary_weights))
     setattr(CONFIG, "firing_threshold", float(args.firing_threshold))
     setattr(CONFIG, "learning_rate", float(args.hebbian_learning_rate))
+    max_trial_len = cycle_len + cycle_delay_range[1]
 
     hebbian_magnitude = (
         "dynamic"
@@ -442,14 +437,17 @@ if __name__ == "__main__":
 
     save_dir = os.path.join(os.path.dirname(__file__), f"results/{folder_name}")
     similar_run = 0
-    if args.overwrite:
-        for root, dirs, files in os.walk(save_dir):
-            for file in files:
-                file_path = os.path.join(root, file)
-                os.remove(file_path)
-    while os.path.exists(save_dir):
-        similar_run += 1
-        save_dir = save_dir.split("__")[0] + "__" + str(similar_run)
+    if os.path.exists(save_dir) and args.overwrite:
+        with os.scandir(save_dir) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    os.unlink(entry.path)
+                else:
+                    shutil.rmtree(entry.path)
+    else:
+        while os.path.exists(save_dir):
+            similar_run += 1
+            save_dir = save_dir.split("__")[0] + "__" + str(similar_run)
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     folder_name = save_dir.split("results/")[1]
@@ -476,35 +474,28 @@ if __name__ == "__main__":
 
     count = 0
 
-    max_trial_len = cycle_len + cycle_delay_range[1]
     test_set = (
         result[0][1]
         if not args.load
         else training_setup["function"](*training_setup["params"])
     )
-    test_set_expanded = np.asarray(test_set)
+
+    test_set_expanded = copy.deepcopy(test_set)
     end_tests = int(args.end_test)
     if end_tests:
         end_tests += 1
         for j in range(len(test_set)):
-            foreperiod = test_set[j][0].index(2)
-            for i in [-1, foreperiod]:
-                # test_set_expanded[j] = np.append(test_set_expanded[j], [1, 0], axis=0)
-                test_set_expanded[j][0].append(1)
-                test_set_expanded[j][1].append(0)
-                for k in range(max_trial_len - 1):
-                    if i == k:
-                        # test_set_expanded[j] = np.append(
-                        #     test_set_expanded[j], [2, 1], axis=1
-                        # )
-                        test_set_expanded[j][0].append(2)
-                        test_set_expanded[j][1].append(1)
-                    else:
-                        # test_set_expanded[j] = np.append(
-                        #     test_set_expanded[j], [0, 0], axis=1
-                        # )
-                        test_set_expanded[j][0].append(0)
-                        test_set_expanded[j][1].append(0)
+            foreperiod = np.where(test_set_expanded[j][0] == 2)[0][0]
+            for i in [0, foreperiod]:
+                extension = np.zeros((2, max_trial_len), dtype=int)
+                extension[:, i] = [2, 1]
+                extension[:, 0] = [1, 0]
+                test_set_expanded[j][0] = np.append(
+                    test_set_expanded[j][0], extension[0], axis=0
+                )
+                test_set_expanded[j][1] = np.append(
+                    test_set_expanded[j][1], extension[1], axis=0
+                )
 
     for WINNER in WINNERS.values():
         count += 1
@@ -583,7 +574,7 @@ if __name__ == "__main__":
 ##^ Output at start and end of each run
 ##^ Run omission tests (WITHOUT PLASTICITY)
 ##^ Both above -> ALL NODE OUTPUTS
-## Plot all omission trials to one plot
+##^ Plot all omission trials to one plot
 ##* NETWORK
 ###^ Response factor and bias of nodes, weight and hebbian of connections at different timesteps
 ####^ Response factor and bias of nodes, weight
@@ -600,6 +591,9 @@ if __name__ == "__main__":
 #### NMF
 #### GLR
 #### GLM
+
+# Save fitness history of each block?
+## Can give insight into how volatile the changes caused by the Hebbian weight is
 
 # Hebbian
 ## Make learning rate trainable

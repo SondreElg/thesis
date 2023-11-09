@@ -244,6 +244,7 @@ def draw_es(id_to_coords, connections, filename):
     plt.grid()
     plt.tight_layout()
     fig.savefig(filename, dpi=300)
+    plt.close()
 
 
 # Function to divide the groups into chunks of size n and calculate the mean
@@ -303,7 +304,6 @@ def draw_hebbian(
     df.to_csv(filename.split(".")[0] + ".csv")
 
     std = get_hebbian_std(df)
-    # std.to_csv(filename.split(".")[0] + ".csv")
     filtered_columns = std[std["std"] > 0.001][["prior_node", "posterior_node"]]
     df = pd.merge(
         df, filtered_columns, on=["prior_node", "posterior_node"], how="inner"
@@ -312,7 +312,6 @@ def draw_hebbian(
         [(t, 0.0) for t in net.input_nodes] + [(t[0], t[4]) for t in net.node_evals],
         columns=["node", "response"],
     )
-    df.to_csv(filename.split(".")[0] + ".csv")
 
     # Calculate the number of rows needed for a 3-column layout
     num_nodes = len(node_df)
@@ -321,9 +320,9 @@ def draw_hebbian(
     ) // 3  # Add 2 to ensure that we have enough rows for all nodes
     # Create subplots in a 3xN grid
     fig, axes = plt.subplots(
-        num_rows, 3, figsize=(15, num_rows * 5)
+        num_rows, 3, figsize=(15, num_rows * 5), sharey=True
     )  # Adjust the figsize as necessary
-    plt.setp(axes, ylim=(0, 1))
+    # plt.setp(axes, ylim=(0, 1))
 
     # Flatten the axes array for easy iteration
     axes = axes.flatten()
@@ -341,7 +340,6 @@ def draw_hebbian(
             axes[idx].set_xlabel("Trial")
             axes[idx].set_ylabel("Magnitude")
             to_plot = df[df["prior_node"] == current_node].reset_index(drop=True)
-            # to_plot.to_csv(filename.split(".")[0] + ".csv")
             for posterior, group in to_plot.groupby(["posterior_node"]):
                 axes[idx].plot(
                     group["trial"],
@@ -359,6 +357,20 @@ def draw_hebbian(
 
     plt.tight_layout()
     fig.savefig(filename, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def draw_omission_trials(omission_outputs, filename):
+    fig = plt.figure()
+    for index, outputs in enumerate(omission_outputs):
+        plt.plot(outputs, label=f"foreperiod {index+1}")
+    lgd = plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
+    fig.savefig(
+        filename,
+        dpi=300,
+        bbox_extra_artists=(lgd,),
+        bbox_inches="tight",
+    )
     plt.close()
 
 
@@ -386,9 +398,7 @@ def draw_output(
 
     split_output = np.array(np.split(network_output, indices), dtype=object)
 
-    split_expected_output = np.array(
-        np.split(expected_output, indices)[:-end_tests], dtype=object
-    )
+    split_expected_output = np.array(np.split(expected_output, indices), dtype=object)
     split_expected_end_test_output = np.array(
         np.split(expected_output, indices)[-end_tests:], dtype=object
     )
@@ -406,15 +416,16 @@ def draw_output(
     avg = np.average(split_output[6:-end_tests], axis=0)
     first = split_output[0]
     trained = split_output[6]
-    last = split_output[len(indices) - end_tests]
-    omission = split_output[len(indices) - 1]
+    last = split_output[-(end_tests + 1)]
     # max_out = np.max(split_output[30:-end_tests], axis=0)
     plt.plot(expected_avg, label="expected")
-    plt.plot(avg, label="average")
-    plt.plot(first, label="first")
-    plt.plot(trained, label="trained")
-    plt.plot(last, label="last")
-    plt.plot(omission, label="omission")
+    # plt.plot(avg, label="average")
+    # plt.plot(first, label="first")
+    # plt.plot(trained, label="trained_early")
+    plt.plot(last, label="trained")
+    if end_tests:
+        omission = split_output[-(end_tests)]
+        plt.plot(omission, label="omission")
     # plt.plot(max_out, label="maximum")
     lgd = plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
     plt.xlabel("timestep")
@@ -445,7 +456,7 @@ def draw_output(
             network["config"],
             network["genome"],
             detailed=True,
-            filename=filename.split(".")[0] + "_hebbian_std_network.png",
+            filename=filename.split(".")[0] + "_hebbian_std_network",
             hebbians=network["hebbians"],
             node_names={
                 -1: "ready",
@@ -463,7 +474,7 @@ def draw_output(
             draw_std=draw_std,
         )
     if len(all_outputs):
-        # df = pd.json_normalize(all_outputs)
+        df = pd.json_normalize(all_outputs)
         df.to_csv(filename.split(".")[0] + f"_all.csv")
         test_names = [
             "trial_last",
@@ -482,13 +493,13 @@ def draw_output(
             start = indices_from_zero[indice_index]
             end = indices_from_zero[indice_index + 1] if end_tests - test else None
             df = pd.json_normalize(all_outputs[start:end])
-            print("test ", test)
-            print("end_tests ", end_tests)
-            print("indices_from_zero ", indices_from_zero)
-            print(indices_from_zero[indice_index])
-            print("start ", start)
-            print("end ", end)
-            print(df)
+            # print("test ", test)
+            # print("end_tests ", end_tests)
+            # print("indices_from_zero ", indices_from_zero)
+            # print(indices_from_zero[indice_index])
+            # print("start ", start)
+            # print("end ", end)
+            # print(df)
             named_df = df.rename(columns={"-2": "ready", "-1": "go", "0": "output"})
             fig3 = plt.figure()
             plt.plot(
@@ -522,7 +533,6 @@ def draw_output(
                 "trial_first",
                 "go_omitted",
             ]:
-                # try:
                 save_dir = (
                     filename.split(".")[0]
                     + f"_all_{test_names[test]}_detailed_network/"
@@ -557,11 +567,6 @@ def draw_output(
                         prune_unused=True,
                         detailed=True,
                     )
-                # except Exception as error:
-                #     print(f"Error: {error}")
-                #     print(
-                #         f"########\nDrawing detailed network of {filename} failed\n########\n{df=}"
-                #     )
     return
 
 
