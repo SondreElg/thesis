@@ -1,0 +1,26 @@
+Key: 3713822
+Fitness: 0.969735277576281
+Nodes:
+	0 DefaultNodeGene(key=0, bias=-0.4489079839281925, response=0.9083296031984877, activation=sigmoid, aggregation=sum)
+	5665 DefaultNodeGene(key=5665, bias=-0.06337670845538645, response=0.7478928815067925, activation=sigmoid, aggregation=sum)
+	16367 DefaultNodeGene(key=16367, bias=-0.019625328177104676, response=0.5765870201442489, activation=sigmoid, aggregation=sum)
+	38307 DefaultNodeGene(key=38307, bias=-0.28234419721221327, response=0.9838970439475379, activation=sigmoid, aggregation=sum)
+	186159 DefaultNodeGene(key=186159, bias=-0.8859722656428431, response=0.5536617059814879, activation=sigmoid, aggregation=sum)
+Connections:
+	DefaultConnectionGene(key=(-2, 5665), weight=-0.6457662340980981, enabled=True)
+	DefaultConnectionGene(key=(-2, 16367), weight=0.9775723741972969, enabled=True)
+	DefaultConnectionGene(key=(-1, 5665), weight=0.5302777721718407, enabled=True)
+	DefaultConnectionGene(key=(-1, 38307), weight=0.4300723797587651, enabled=True)
+	DefaultConnectionGene(key=(-1, 186159), weight=0.9404848933334006, enabled=True)
+	DefaultConnectionGene(key=(0, 5665), weight=-0.21400802236952438, enabled=False)
+	DefaultConnectionGene(key=(5665, 0), weight=0.9824705161523438, enabled=True)
+	DefaultConnectionGene(key=(5665, 5665), weight=0.6801662680713921, enabled=True)
+	DefaultConnectionGene(key=(16367, 0), weight=-1.0, enabled=True)
+	DefaultConnectionGene(key=(16367, 5665), weight=-0.9890431621520882, enabled=True)
+	DefaultConnectionGene(key=(16367, 16367), weight=0.7903869967938, enabled=True)
+	DefaultConnectionGene(key=(16367, 186159), weight=0.2955929355884305, enabled=True)
+	DefaultConnectionGene(key=(38307, 16367), weight=-0.7795765701497802, enabled=True)
+	DefaultConnectionGene(key=(38307, 38307), weight=0.53512217586489, enabled=True)
+	DefaultConnectionGene(key=(38307, 186159), weight=-0.39451307601206137, enabled=False)
+	DefaultConnectionGene(key=(186159, 5665), weight=0.5339702631318826, enabled=True)
+	DefaultConnectionGene(key=(186159, 38307), weight=0.1548639598965332, enabled=True)
