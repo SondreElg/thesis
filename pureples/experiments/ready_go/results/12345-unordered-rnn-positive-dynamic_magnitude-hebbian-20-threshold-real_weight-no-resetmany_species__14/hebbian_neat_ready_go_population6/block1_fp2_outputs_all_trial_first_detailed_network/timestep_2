@@ -1,0 +1,81 @@
+digraph {
+	node [fontsize=9 height=0.10 shape=circle width=0.10]
+	"ready
+output 0.000" [fillcolor=yellow shape=box style=filled]
+	"go
+output 1.000" [fillcolor=green shape=box style=filled]
+	"output
+bias 0.673
+h_scaling 0.828
+output 0.935" [fillcolor=lightblue style=filled]
+	"key 3724
+bias -0.964
+h_scaling 0.429
+output 0.707" [fillcolor=white style=filled]
+	"key 9967
+bias -0.547
+h_scaling 0.839
+output 0.664" [fillcolor=white style=filled]
+	"key 3724
+bias -0.964
+h_scaling 0.429
+output 0.707" -> "output
+bias 0.673
+h_scaling 0.828
+output 0.935" [label=-0.983 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"go
+output 1.000" -> "key 3724
+bias -0.964
+h_scaling 0.429
+output 0.707" [label=1.080 color=red fontsize=9 penwidth=0.1 style=solid]
+	"go
+output 1.000" -> "key 9967
+bias -0.547
+h_scaling 0.839
+output 0.664" [label=0.479 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 9967
+bias -0.547
+h_scaling 0.839
+output 0.664" -> "key 3724
+bias -0.964
+h_scaling 0.429
+output 0.707" [label=1.085 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 3724
+bias -0.964
+h_scaling 0.429
+output 0.707" -> "key 3724
+bias -0.964
+h_scaling 0.429
+output 0.707" [label=1.013 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 9967
+bias -0.547
+h_scaling 0.839
+output 0.664" -> "key 9967
+bias -0.547
+h_scaling 0.839
+output 0.664" [label=1.134 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 9967
+bias -0.547
+h_scaling 0.839
+output 0.664" -> "output
+bias 0.673
+h_scaling 0.828
+output 0.935" [label=-0.971 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 0.000" -> "key 9967
+bias -0.547
+h_scaling 0.839
+output 0.664" [label=-0.273 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"output
+bias 0.673
+h_scaling 0.828
+output 0.935" -> "key 9967
+bias -0.547
+h_scaling 0.839
+output 0.664" [label=0.230 color=red fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 0.000" -> "key 3724
+bias -0.964
+h_scaling 0.429
+output 0.707" [label=-0.233 color=blue fontsize=9 penwidth=0.1 style=solid]
+}
