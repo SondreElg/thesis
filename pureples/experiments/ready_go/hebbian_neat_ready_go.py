@@ -646,7 +646,6 @@ if __name__ == "__main__":
 ### Introduce that first, and then how Maes builds on it
 # 4
 ## Alpha used for hebbian scaling factor. Reuse symbol
-## Rewrite part about "action/axon potential"
 ## No holdover of node activity between timesteps
 # 5
 ## Use Network A for whole 5.1 section?

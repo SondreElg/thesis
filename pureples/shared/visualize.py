@@ -75,9 +75,7 @@ def draw_net(
         name = node_names.get(k, str(k))
         if detailed:
             node = genome.nodes[k]
-            name = (
-                f"{name}\nbias {'%.3f' % node.bias}\nh_scaling {'%.3f' % node.response}"
-            )
+            name = f"{name}\nbias {'%.3f' % node.bias}\n&#945; {'%.3f' % node.response}"
             if node_outputs:
                 name = name + f"\noutput {'%.3f' % node_outputs[k]}"
             node_names[k] = name
@@ -93,7 +91,7 @@ def draw_net(
         name = node_names.get(n, str(n))
         if detailed:
             node = genome.nodes[n]
-            name = f"key {name}\nbias {'%.3f' % node.bias}\nh_scaling {'%.3f' % node.response}"
+            name = f"key {name}\nbias {'%.3f' % node.bias}\n&#945; {'%.3f' % node.response}"
             if node_outputs:
                 name = name + f"\noutput {'%.3f' % node_outputs[n]}"
             node_names[n] = name
