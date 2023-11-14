@@ -1,0 +1,162 @@
+digraph {
+	node [fontsize=9 height=0.10 shape=circle width=0.10]
+	"ready
+output 0.000" [fillcolor=yellow shape=box style=filled]
+	"go
+output 1.000" [fillcolor=green shape=box style=filled]
+	"output
+bias -0.116
+h_scaling 1.000
+output 0.912" [fillcolor=lightblue style=filled]
+	"key 53346
+bias -0.668
+h_scaling 1.000
+output 0.125" [fillcolor=white style=filled]
+	"key 36293
+bias -0.333
+h_scaling 1.000
+output 0.009" [fillcolor=white style=filled]
+	"key 3021
+bias 0.435
+h_scaling 1.000
+output 0.049" [fillcolor=white style=filled]
+	"key 3022
+bias 0.440
+h_scaling 1.000
+output 0.048" [fillcolor=white style=filled]
+	"key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" [fillcolor=white style=filled]
+	"go
+output 1.000" -> "key 3022
+bias 0.440
+h_scaling 1.000
+output 0.048" [label=-0.262 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 3022
+bias 0.440
+h_scaling 1.000
+output 0.048" -> "output
+bias -0.116
+h_scaling 1.000
+output 0.912" [label=-1.000 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" -> "key 3021
+bias 0.435
+h_scaling 1.000
+output 0.049" [label=-0.993 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 3021
+bias 0.435
+h_scaling 1.000
+output 0.049" -> "output
+bias -0.116
+h_scaling 1.000
+output 0.912" [label=0.990 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 3021
+bias 0.435
+h_scaling 1.000
+output 0.049" -> "key 3022
+bias 0.440
+h_scaling 1.000
+output 0.048" [label=-1.000 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 0.000" -> "key 3021
+bias 0.435
+h_scaling 1.000
+output 0.049" [label=0.299 color=red fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 0.000" -> "key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" [label=-0.408 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"go
+output 1.000" -> "key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" [label=1.083 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 3021
+bias 0.435
+h_scaling 1.000
+output 0.049" -> "key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" [label=-0.792 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 0.000" -> "key 36293
+bias -0.333
+h_scaling 1.000
+output 0.009" [label=1.437 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 36293
+bias -0.333
+h_scaling 1.000
+output 0.009" -> "key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" [label=-0.139 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 36293
+bias -0.333
+h_scaling 1.000
+output 0.009" -> "key 53346
+bias -0.668
+h_scaling 1.000
+output 0.125" [label=1.046 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 53346
+bias -0.668
+h_scaling 1.000
+output 0.125" -> "key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" [label=-0.615 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 53346
+bias -0.668
+h_scaling 1.000
+output 0.125" -> "key 53346
+bias -0.668
+h_scaling 1.000
+output 0.125" [label=0.966 color=red fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 0.000" -> "key 3022
+bias 0.440
+h_scaling 1.000
+output 0.048" [label=-0.256 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"go
+output 1.000" -> "key 3021
+bias 0.435
+h_scaling 1.000
+output 0.049" [label=-0.938 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"output
+bias -0.116
+h_scaling 1.000
+output 0.912" -> "key 36293
+bias -0.333
+h_scaling 1.000
+output 0.009" [label=-0.238 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" -> "key 3022
+bias 0.440
+h_scaling 1.000
+output 0.048" [label=1.029 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" -> "output
+bias -0.116
+h_scaling 1.000
+output 0.912" [label=-0.987 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"go
+output 1.000" -> "key 36293
+bias -0.333
+h_scaling 1.000
+output 0.009" [label=-0.391 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"output
+bias -0.116
+h_scaling 1.000
+output 0.912" -> "key 7838
+bias 0.430
+h_scaling 1.000
+output 0.970" [label=0.193 color=red fontsize=9 penwidth=0.1 style=solid]
+}
