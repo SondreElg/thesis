@@ -94,7 +94,7 @@ class HebbianRecurrentNetwork(object):
                     elif input_val > 0 or output_val > 0:
                         self.hebbian_buffer[node][i] = (
                             1 - learning_rate
-                        ) * self.hebbian_buffer[node][i] - learning_rate * (
+                        ) * self.hebbian_buffer[node][i] + learning_rate * (
                             update_factor * input_val * output_val
                         )
                     # else:

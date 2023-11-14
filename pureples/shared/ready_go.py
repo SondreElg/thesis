@@ -3,12 +3,15 @@ import math
 import numpy as np
 
 
-def shuffle_data(generation_data, flip_pad=False):
-    ordered = np.arange(len(generation_data))
-    shuffled = np.arange(len(generation_data))
-    flipped = np.flip(ordered)
-    while np.array_equal(shuffled, ordered) or np.array_equal(shuffled, flipped):
-        np.random.shuffle(shuffled)
+def shuffle_data(generation_data, flip_pad=False, ordering=[]):
+    if ordering:
+        shuffled = ordering
+    else:
+        ordered = np.arange(len(generation_data))
+        shuffled = np.arange(len(generation_data))
+        flipped = np.flip(ordered)
+        while np.array_equal(shuffled, ordered) or np.array_equal(shuffled, flipped):
+            np.random.shuffle(shuffled)
 
     shuffled_data = generation_data[shuffled]
     if flip_pad:
@@ -25,6 +28,7 @@ def foreperiod_rg_list(
     cycle_delay_range=[0, 6],
     foreperiods=[],
     flip_pad=False,
+    ordering=[],
     repetitions=1,
 ):
     """Returns a list of inputs representing the ready-go sequence with delays between each cycle"""
@@ -54,7 +58,7 @@ def foreperiod_rg_list(
 
         generation_data[i] = [inputs, expected_output]
 
-    return shuffle_data(generation_data, flip_pad)
+    return shuffle_data(generation_data, flip_pad, ordering)
 
 
 def ready_go_list(

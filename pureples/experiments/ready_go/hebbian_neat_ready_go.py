@@ -26,6 +26,7 @@ from pureples.shared.visualize import (
 from pureples.shared.ready_go import ready_go_list, foreperiod_rg_list
 from pureples.shared.population_plus import Population
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
+from pureples.shared.hebbian_rnn_plus import HebbianRecurrentDecayingNetwork
 from pureples.shared.distributions import bimodal
 from pureples.shared.IZNodeGene_plus import IZNN, IZGenome
 
@@ -43,17 +44,20 @@ parser.add_argument(
 parser.add_argument("--binary_weights", default=False)
 parser.add_argument("--firing_threshold", default=0.20)
 parser.add_argument("--hebbian_learning_rate", default=0.05)
-parser.add_argument("--experiment", default="12345-unordered")  # not yet implemented
+parser.add_argument("--experiment", default="foreperiod")  # not yet implemented
+parser.add_argument("--max_foreperiod", default=25)
+parser.add_argument("--foreperiods", default="[1, 2, 3, 4, 5]")
+parser.add_argument("--ordering", default="[]")
 parser.add_argument("--reset", default=False)
 parser.add_argument("--suffix", default="")
-parser.add_argument("--model", default="rnn", choices=["rnn", "iznn"])
+parser.add_argument("--model", default="rnn", choices=["rnn", "iznn", "rnn_d"])
 parser.add_argument("--overwrite", default=False)
 parser.add_argument("--end_test", default=False)
 parser.add_argument("--flip_pad_data", default=True)
 parser.add_argument("--trial_delay_range", default="[0, 3]")
 args = parser.parse_args()
 
-foreperiod = 25
+foreperiod = int(args.max_foreperiod)
 trials = 50
 time_block_size = 5
 cycle_delay_range = json.loads(args.trial_delay_range)
@@ -66,7 +70,7 @@ training_setup = {
         trials,
         time_block_size,
         cycle_delay_range,
-        [1, 2, 3, 4, 5],
+        json.loads(args.foreperiods),
         # [
         #     # np.random.normal,
         #     # np.random.triangular,
@@ -93,12 +97,13 @@ training_setup = {
         #     {"loc": 5, "scale": 0},
         # ],
         args.flip_pad_data,
+        json.loads(args.ordering),
     ],
 }
 
 # Config for network
 CONFIG = None
-if args.model == "rnn":
+if args.model == "rnn" or args.model == "rnn_d":
     CONFIG = neat.config.Config(
         pureples.shared.genome_plus.DefaultGenome,
         neat.reproduction.DefaultReproduction,
@@ -129,7 +134,7 @@ def run_rnn(
     blocks = len(ready_go_data)
 
     network_fitness = np.empty((blocks))
-    omission_trial_outputs = np.empty((blocks, max_trial_len), dtype=object)
+    omission_trial_outputs = np.empty((blocks, cycle_len), dtype=object)
     foreperiods = np.empty((blocks), dtype=int)
 
     for inputs, expected_output in ready_go_data:
@@ -327,6 +332,11 @@ def _eval_fitness(genome, config):
 
         # genome fitness
         return run_rnn(None, network, config.train_set)
+    elif args.model == "rnn_d":
+        network = HebbianRecurrentDecayingNetwork.create(genome, config)
+
+        # genome fitness
+        return run_rnn(None, network, config.train_set)
     elif args.model == "iznn":
         network = IZNN.create(genome, config)
 
@@ -371,7 +381,7 @@ def run(*, gens, max_trials=1, initial_pop=None):
     setattr(CONFIG, "trials", 1)
     stats_one = neat.StatisticsReporter()
     pop = ini_pop(initial_pop, CONFIG, stats_one)
-    pe = neat.ParallelEvaluator(16, _eval_fitness)
+    pe = neat.ParallelEvaluator(8, _eval_fitness)
     species_one = pop.run(pe.evaluate, gens)
 
     all_time_best = pop.reporters.reporters[0].best_genome()
@@ -388,6 +398,13 @@ def run(*, gens, max_trials=1, initial_pop=None):
         delimiter=",",
         null_value=-1,
     )
+    # Save population if wished reused and draw it to file.
+    with open(
+        f"pureples/experiments/ready_go/results/{folder_name}/population.pkl",
+        "wb",
+    ) as output:
+        pickle.dump(pop, output, pickle.HIGHEST_PROTOCOL)
+
     return species_one, (stats_one), all_time_best  # , stats_ten, stats_hundred)
 
 
@@ -504,8 +521,12 @@ if __name__ == "__main__":
             os.mkdir(population_dir)
         # Verify network output against training data.
         print("\nOutput:")
-        if args.model == "rnn":
-            NETWORK = HebbianRecurrentNetwork.create(WINNER, CONFIG)
+        if args.model == "rnn" or args.model == "rnn_d":
+            NETWORK = (
+                HebbianRecurrentNetwork.create(WINNER, CONFIG)
+                if args.model == "rnn"
+                else HebbianRecurrentDecayingNetwork.create(WINNER, CONFIG)
+            )
             NETWORK.reset()
             WINNER.fitness = run_rnn(
                 WINNER,
@@ -570,24 +591,9 @@ if __name__ == "__main__":
         )
 
 # TODO
-# Visualize
-##^ Output at start and end of each run
-##^ Run omission tests (WITHOUT PLASTICITY)
-##^ Both above -> ALL NODE OUTPUTS
-##^ Plot all omission trials to one plot
-##* NETWORK
-###^ Response factor and bias of nodes, weight and hebbian of connections at different timesteps
-####^ Response factor and bias of nodes, weight
-#### Dotted line for connections with varying hebbian
-####^ At different timesteps
-###^ Standard deviation of hebbian for different connections
 ## Fitness of population over time
-### Species over time?
-##* Hebbian
-###^ Subplot for each source node
-####^ INCLUDE MAGNITUDE FACTOR
-##### (Included for hebbian plot, but not for std calculations. Should it be?)
-### Correlation of hebbian values and foreperiod
+### Size of individuals over time?
+## Correlation of hebbian values and foreperiod
 #### NMF
 #### GLR
 #### GLM
@@ -595,17 +601,16 @@ if __name__ == "__main__":
 # Save fitness history of each block?
 ## Can give insight into how volatile the changes caused by the Hebbian weight is
 
-# Hebbian
-## Make learning rate trainable
-## The Backpropamine paper's implementation differs slightly, try theirs as well
-
 # Experiments
-## Focus on POSITIVE, WITH modulation
-## Try weights up to 10 (to observe hebbian changes in a more fine-grained environment)
 ## Ideas
 ### Implement the experiment from the Maes et al. 2020 paper
 ### Prior vs posterior probability (12345 vs regular)
-### Higher firing threshold
+##!!! Test entire population on foreperiod outside learned foreperiod !!!
+### Keep best, visualize
+## Holdover at 80%
+
+# Visualize
+## Activity of each neuron for each foreperiod
 
 # Thesis
 ## Have to explain HOW/WHY the networks form the topologies
@@ -624,11 +629,31 @@ if __name__ == "__main__":
 ## Compare model to another existing model
 ### Ensure to communicate how your model is unique
 ## Human model of Ready-Go
+## Could the networks resemble those theorized in the paper on predictive coding? [...] canonical circuits
 
+# Reformatting
+## Either explain all three networks, or only one
+### Could put B and C in appendix
+## Fix margin size
 
-# Next meeting
-## Make list of potential figures
-### Population/species fitness over time
-### Population/species size over time
-### Number of species over time
-### Network fitness per node/connection over time
+# 2
+## Cite Burkitt Hodendoorn paper (2019) somewhere?
+
+# 3
+## Their network is top-down, mine is bottom-up
+## What are you trying to solve?
+## See if there's some related work in their introduction
+### Introduce that first, and then how Maes builds on it
+# 4
+## Alpha used for hebbian scaling factor. Reuse symbol
+## Rewrite part about "action/axon potential"
+## No holdover of node activity between timesteps
+# 5
+## Use Network A for whole 5.1 section?
+### Fig 5.1 only A
+### Fig 5.5 all networks + std networks
+### Fig 5.6 all networks
+## 5.3
+### Don't need to analyze networks, just give a theory - explain your thoughts clearly
+### What *exactly* do you need to do to interpret the results?
+### What do you expect the results to be?

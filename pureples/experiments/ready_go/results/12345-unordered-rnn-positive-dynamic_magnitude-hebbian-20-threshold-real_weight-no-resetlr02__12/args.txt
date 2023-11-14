@@ -1,0 +1,1 @@
+Namespace(gens='2500', target_folder=None, load=None, config='pureples/experiments/ready_go/config_neat_ready_go', hebbian_type='positive', binary_weights=False, firing_threshold=0.2, hebbian_learning_rate='0.02', experiment='12345-unordered', reset=False, suffix='lr02', model='rnn', overwrite='True', end_test='1', flip_pad_data=True)

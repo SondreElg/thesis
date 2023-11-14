@@ -21,6 +21,7 @@ from pureples.shared.ready_go import (
     foreperiod_rg_list,
 )
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
+from pureples.shared.hebbian_rnn_plus import HebbianRecurrentDecayingNetwork
 from pureples.shared.no_direct_rnn import RecurrentNetwork
 from pureples.shared.distributions import bimodal
 from pureples.shared.genome_plus import DefaultGenome

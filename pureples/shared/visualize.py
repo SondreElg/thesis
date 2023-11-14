@@ -22,7 +22,7 @@ def draw_net(
     show_disabled=True,
     prune_unused=False,
     node_colors=None,
-    fmt="svg",
+    fmt="pdf",
     detailed=False,
     node_outputs=None,
     hebbians=None,
