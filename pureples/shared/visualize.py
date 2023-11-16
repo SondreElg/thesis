@@ -5,11 +5,12 @@ Varying visualisation tools.
 import os
 import pickle
 import warnings
+import math
 import graphviz
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import math
+import seaborn as sns
 import pandas as pd
 
 
@@ -117,7 +118,7 @@ def draw_net(
                     & (hebbian_std_df["posterior_node"] == int(output))  # VERIFY ORDER
                 ]
                 if connection_std.empty:
-                    label = ""
+                    label = "    "
                 else:
                     std = connection_std.iloc[0]["std"]
                     label = "{:.3f}".format(std)
@@ -347,6 +348,16 @@ def draw_hebbian(
                     .at[0, "response"],
                     label=posterior,
                 )
+            for x in [50, 100, 150, 200]:
+                axes[idx].axvline(
+                    x=x,
+                    ymin=-1.0,
+                    ymax=1,
+                    c="gray",
+                    linewidth=1,
+                    zorder=-1,
+                    clip_on=False,
+                )
             axes[idx].legend(loc="upper right")
 
     # If there are any empty subplots, turn them off
@@ -356,6 +367,56 @@ def draw_hebbian(
     plt.tight_layout()
     fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close()
+
+
+def plot_hebbian_correlation_heatmap(csv_file_path, mapping_list):
+    # Load the CSV file
+    df = pd.read_csv(csv_file_path)
+
+    # Rename nodes -1, -2, and 0
+    node_renaming = {-1: "ready", -2: "go", 0: "output"}
+    df.replace(
+        {"prior_node": node_renaming, "posterior_node": node_renaming}, inplace=True
+    )
+
+    # For every 50 trials, take the average of trials 40-50
+    df["trial_group"] = df["trial"] // 50
+    filtered_df = df[(df["trial"] % 50 >= 40) & (df["trial"] % 50 <= 49)]
+    average_df = (
+        filtered_df.groupby(["trial_group", "prior_node", "posterior_node"])
+        .agg(avg_weight=("weight", "mean"))
+        .reset_index()
+    )
+
+    # Map each trial group to an entry in the provided mapping list
+    average_df["mapped_value"] = average_df["trial_group"].apply(
+        lambda x: mapping_list[x % len(mapping_list)]
+    )
+
+    # Calculate the correlation
+    grouped = (
+        average_df.groupby(["prior_node", "posterior_node"])
+        .apply(lambda g: g["mapped_value"].corr(g["avg_weight"]))
+        .reset_index(name="correlation")
+    )
+    grouped = grouped.dropna()
+
+    # Create a pivot table for the heatmap
+    pivot_table = grouped.pivot("prior_node", "posterior_node", "correlation")
+
+    # Plot the heatmap
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(
+        pivot_table,
+        cmap="coolwarm",
+        annot=False,
+        vmin=-1,
+        vmax=1,
+        cbar_kws={"label": "Correlation"},
+    )
+    plt.xlabel("Posterior Node")
+    plt.ylabel("Prior Node")
+    plt.show()
 
 
 def draw_omission_trials(omission_outputs, filename):

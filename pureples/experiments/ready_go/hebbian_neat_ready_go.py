@@ -638,21 +638,39 @@ if __name__ == "__main__":
 
 # 2
 ## Cite Burkitt Hodendoorn paper (2019) somewhere?
+## FP task figure
 
 # 3
-## Their network is top-down, mine is bottom-up
-## What are you trying to solve?
-## See if there's some related work in their introduction
-### Introduce that first, and then how Maes builds on it
+## Add T-NEAT paper
+### If we're looking for a repeated local motif, it's probably fairly general (not necesarrily having much variablity in synaptic delay)
+### They're
+#### Trying to find an optimal structure to predict time-series
+#### Engineering approach -> is overkill for my goal
+####
+### I'm
+#### Trying to find a minimal structure to predict a binary time-series
+#### Variable delay ->
+## Maes
+### Their network is top-down, mine is bottom-up
+### What are you trying to solve that their work doesn't?
+### See if there's some related work in their introduction
+#### Introduce that first, and then how Maes builds on it
 # 4
-## Alpha used for hebbian scaling factor. Reuse symbol
-## No holdover of node activity between timesteps
+## Maes uses Hebbian, T-NEAT uses NEAT -> I use both
+##* Alpha used for hebbian scaling factor. Reuse symbol
+##! How experiment differs from time-series analysis (it doesn't, it's a subset)
+### Look up binary time-seres prediction
+### Delay between trials -> Multiple states encode for the same expected output
+### -> Network encodes lookup table of ready-go timings?
+### Given that you know the input is sparse, you could reduce the size of the network -> more economic
+#### Goes in line with the theory of microcircuit motifs, in the sense that each microcircuit would be oblivious to exactly what they're predicting
 # 5
-## Use Network A for whole 5.1 section?
-### Fig 5.1 only A
-### Fig 5.5 all networks + std networks
-### Fig 5.6 all networks
-## 5.3
-### Don't need to analyze networks, just give a theory - explain your thoughts clearly
+## 5.4
+### Output node is modulated by pairs of excitatory and inhibitory connections
+#### What is the tipping point for balance between these connections causing the output to increase expotnentially?
+### Don't need to deeply analyze networks, just give a theory - explain your thoughts clearly
 ### What *exactly* do you need to do to interpret the results?
 ### What do you expect the results to be?
+# 6
+## 6.3
+## Map networks to circuit maps of human brain
