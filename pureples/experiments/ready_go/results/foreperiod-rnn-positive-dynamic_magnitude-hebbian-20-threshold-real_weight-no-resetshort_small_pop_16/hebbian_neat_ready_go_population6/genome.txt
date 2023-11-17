@@ -1,0 +1,27 @@
+Key: 332496
+Fitness: 0.9774675367808422
+Nodes:
+	0 DefaultNodeGene(key=0, bias=-0.983849331105233, response=1.0, activation=sigmoid, aggregation=sum)
+	227 DefaultNodeGene(key=227, bias=-0.26588802364431324, response=0.4714330368520856, activation=sigmoid, aggregation=sum)
+	627 DefaultNodeGene(key=627, bias=0.381371418668091, response=0.8955985486984438, activation=sigmoid, aggregation=sum)
+	800 DefaultNodeGene(key=800, bias=-0.31997462761730117, response=0.5567722986773979, activation=sigmoid, aggregation=sum)
+	2634 DefaultNodeGene(key=2634, bias=-0.6323133724962187, response=0.8476739194306482, activation=sigmoid, aggregation=sum)
+Connections:
+	DefaultConnectionGene(key=(-2, 627), weight=-0.9500826914388943, enabled=True)
+	DefaultConnectionGene(key=(-1, 227), weight=-0.25457237123490306, enabled=True)
+	DefaultConnectionGene(key=(-1, 627), weight=-0.5644809276554249, enabled=True)
+	DefaultConnectionGene(key=(-1, 800), weight=0.6755666880461254, enabled=True)
+	DefaultConnectionGene(key=(0, 800), weight=0.9804415346529801, enabled=True)
+	DefaultConnectionGene(key=(227, 0), weight=0.3716650600943204, enabled=True)
+	DefaultConnectionGene(key=(227, 800), weight=0.8320836083630843, enabled=True)
+	DefaultConnectionGene(key=(627, 0), weight=-0.9272628380785575, enabled=True)
+	DefaultConnectionGene(key=(627, 627), weight=-0.7041652175759171, enabled=True)
+	DefaultConnectionGene(key=(627, 2634), weight=1.0, enabled=True)
+	DefaultConnectionGene(key=(800, 0), weight=0.5910283650479835, enabled=True)
+	DefaultConnectionGene(key=(800, 800), weight=-1.0, enabled=True)
+	DefaultConnectionGene(key=(800, 2634), weight=-0.8493450905867144, enabled=True)
+	DefaultConnectionGene(key=(2634, 0), weight=1.0, enabled=True)
+	DefaultConnectionGene(key=(2634, 227), weight=0.6666307103278619, enabled=True)
+	DefaultConnectionGene(key=(2634, 627), weight=0.4608835283405932, enabled=True)
+	DefaultConnectionGene(key=(2634, 800), weight=-0.5632163426231839, enabled=False)
+	DefaultConnectionGene(key=(2634, 2634), weight=0.7737107350577156, enabled=True)

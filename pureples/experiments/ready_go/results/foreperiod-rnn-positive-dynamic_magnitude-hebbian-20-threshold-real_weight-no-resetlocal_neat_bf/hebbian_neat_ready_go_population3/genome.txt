@@ -1,0 +1,27 @@
+Key: 3726668
+Fitness: 0.9491453194531244
+Nodes:
+	0 DefaultNodeGene(key=0, bias=-1.0, response=0.514733676933329, activation=sigmoid, aggregation=sum)
+	859 DefaultNodeGene(key=859, bias=-0.5390115479377516, response=0.41244913913694475, activation=sigmoid, aggregation=sum)
+	860 DefaultNodeGene(key=860, bias=-0.5156613435796246, response=0.8847569588389965, activation=sigmoid, aggregation=sum)
+	41849 DefaultNodeGene(key=41849, bias=-0.276477462707545, response=1.0, activation=sigmoid, aggregation=sum)
+	46716 DefaultNodeGene(key=46716, bias=0.7646158707045095, response=0.5848702614985719, activation=sigmoid, aggregation=sum)
+	118566 DefaultNodeGene(key=118566, bias=0.20694255629553954, response=0.021557207270233587, activation=sigmoid, aggregation=sum)
+Connections:
+	DefaultConnectionGene(key=(-2, 860), weight=-0.9919150132599922, enabled=True)
+	DefaultConnectionGene(key=(-2, 46716), weight=0.3605607459779509, enabled=False)
+	DefaultConnectionGene(key=(-2, 118566), weight=0.9294908620666802, enabled=False)
+	DefaultConnectionGene(key=(-1, 860), weight=-0.0733977039917536, enabled=False)
+	DefaultConnectionGene(key=(-1, 41849), weight=0.978693326063158, enabled=True)
+	DefaultConnectionGene(key=(-1, 46716), weight=0.01825709132231394, enabled=True)
+	DefaultConnectionGene(key=(0, 859), weight=0.8380767397235358, enabled=False)
+	DefaultConnectionGene(key=(0, 41849), weight=-0.22331326532871795, enabled=True)
+	DefaultConnectionGene(key=(0, 118566), weight=0.591326144264062, enabled=True)
+	DefaultConnectionGene(key=(859, 0), weight=0.7726688832996826, enabled=True)
+	DefaultConnectionGene(key=(859, 46716), weight=-0.2591902658169487, enabled=True)
+	DefaultConnectionGene(key=(860, 0), weight=0.9822613714540138, enabled=True)
+	DefaultConnectionGene(key=(860, 859), weight=0.6229032947360218, enabled=True)
+	DefaultConnectionGene(key=(860, 860), weight=0.9979342995213438, enabled=True)
+	DefaultConnectionGene(key=(41849, 860), weight=0.2549512326945991, enabled=True)
+	DefaultConnectionGene(key=(41849, 41849), weight=0.5593397724652402, enabled=True)
+	DefaultConnectionGene(key=(118566, 46716), weight=0.7527317820606211, enabled=True)

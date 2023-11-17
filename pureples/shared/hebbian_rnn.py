@@ -114,6 +114,12 @@ class HebbianRecurrentNetwork(object):
                         if abs(w) + h * response < 0:
                             h += (abs(w) - h * response) / response
                         self.hebbian_buffer[node][i] = h
+            node_sum = sum(self.hebbian_buffer[node].values(), 0.0)
+            if node_sum > 1.0:
+                self.hebbian_buffer[node] = {
+                    k: v / node_sum for k, v in self.hebbian_buffer[node].items()
+                }
+
         if apply:
             self.hebbian_update_log.append([copy.deepcopy(self.hebbian_buffer)])
 

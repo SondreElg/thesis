@@ -351,7 +351,7 @@ def draw_hebbian(
             for x in [50, 100, 150, 200]:
                 axes[idx].axvline(
                     x=x,
-                    ymin=-1.0,
+                    ymin=0.0,
                     ymax=1,
                     c="gray",
                     linewidth=1,

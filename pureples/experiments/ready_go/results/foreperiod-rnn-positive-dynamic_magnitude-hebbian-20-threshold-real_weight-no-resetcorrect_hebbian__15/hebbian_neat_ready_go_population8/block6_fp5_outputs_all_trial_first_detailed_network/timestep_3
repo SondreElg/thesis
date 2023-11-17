@@ -1,0 +1,158 @@
+digraph {
+	node [fontsize=9 height=0.10 shape=circle width=0.10]
+	"ready
+output 0.000" [fillcolor=yellow shape=box style=filled]
+	"go
+output 0.000" [fillcolor=green shape=box style=filled]
+	"output
+bias 0.336
+h_scaling 0.990
+output 0.748" [fillcolor=lightblue style=filled]
+	"key 39329
+bias -0.997
+h_scaling 0.778
+output 0.365" [fillcolor=white style=filled]
+	"key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" [fillcolor=white style=filled]
+	"key 40903
+bias -0.407
+h_scaling 0.975
+output 0.308" [fillcolor=white style=filled]
+	"key 68680
+bias -0.212
+h_scaling 0.038
+output 0.452" [fillcolor=white style=filled]
+	"key 11725
+bias -0.422
+h_scaling 0.662
+output 0.195" [fillcolor=white style=filled]
+	"key 102687
+bias 0.314
+h_scaling 0.349
+output 0.622" [fillcolor=white style=filled]
+	"key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" -> "output
+bias 0.336
+h_scaling 0.990
+output 0.748" [label=-0.996 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"go
+output 0.000" -> "key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" [label=1.004 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" -> "key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" [label=1.116 color=red fontsize=9 penwidth=0.1 style=solid]
+	"go
+output 0.000" -> "key 11725
+bias -0.422
+h_scaling 0.662
+output 0.195" [label=-0.102 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 0.000" -> "key 39329
+bias -0.997
+h_scaling 0.778
+output 0.365" [label=1.056 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 39329
+bias -0.997
+h_scaling 0.778
+output 0.365" -> "key 11725
+bias -0.422
+h_scaling 0.662
+output 0.195" [label=0.546 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 11725
+bias -0.422
+h_scaling 0.662
+output 0.195" -> "key 40903
+bias -0.407
+h_scaling 0.975
+output 0.308" [label=1.010 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 40903
+bias -0.407
+h_scaling 0.975
+output 0.308" -> "key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" [label=-0.974 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"go
+output 0.000" -> "key 40903
+bias -0.407
+h_scaling 0.975
+output 0.308" [label=-0.184 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" -> "key 68680
+bias -0.212
+h_scaling 0.038
+output 0.452" [label=0.995 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 68680
+bias -0.212
+h_scaling 0.038
+output 0.452" -> "key 39329
+bias -0.997
+h_scaling 0.778
+output 0.365" [label=0.999 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 40903
+bias -0.407
+h_scaling 0.975
+output 0.308" -> "key 68680
+bias -0.212
+h_scaling 0.038
+output 0.452" [label=-0.259 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 68680
+bias -0.212
+h_scaling 0.038
+output 0.452" -> "output
+bias 0.336
+h_scaling 0.990
+output 0.748" [label=-0.794 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 40903
+bias -0.407
+h_scaling 0.975
+output 0.308" -> "output
+bias 0.336
+h_scaling 0.990
+output 0.748" [label=0.688 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 11725
+bias -0.422
+h_scaling 0.662
+output 0.195" -> "key 68680
+bias -0.212
+h_scaling 0.038
+output 0.452" [label=0.562 color=red fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 0.000" -> "key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" [label=-0.288 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 2406
+bias -0.221
+h_scaling 0.916
+output 0.023" -> "key 102687
+bias 0.314
+h_scaling 0.349
+output 0.622" [label=-0.908 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 102687
+bias 0.314
+h_scaling 0.349
+output 0.622" -> "output
+bias 0.336
+h_scaling 0.990
+output 0.748" [label=0.582 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 102687
+bias 0.314
+h_scaling 0.349
+output 0.622" -> "key 39329
+bias -0.997
+h_scaling 0.778
+output 0.365" [label=0.202 color=red fontsize=9 penwidth=0.1 style=solid]
+}

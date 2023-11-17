@@ -1,0 +1,65 @@
+digraph {
+	node [fontsize=9 height=0.10 shape=circle width=0.10]
+	ready [fillcolor=yellow shape=box style=filled]
+	go [fillcolor=green shape=box style=filled]
+	"output
+bias 0.306
+h_scaling 0.508" [fillcolor=lightblue style=filled]
+	"key 38342
+bias -0.592
+h_scaling 0.041" [fillcolor=white style=filled]
+	"key 4330
+bias -0.376
+h_scaling 0.073" [fillcolor=white style=filled]
+	"key 27600
+bias -0.798
+h_scaling 0.430" [fillcolor=white style=filled]
+	"key 1684
+bias 0.182
+h_scaling 0.996" [fillcolor=white style=filled]
+	ready -> "key 1684
+bias 0.182
+h_scaling 0.996" [label="" color=blue fontsize=9 penwidth=0.1 style=solid]
+	go -> "key 1684
+bias 0.182
+h_scaling 0.996" [label=0.007 color=red fontsize=9 penwidth=0.31740581446497707 style=solid]
+	"key 1684
+bias 0.182
+h_scaling 0.996" -> "output
+bias 0.306
+h_scaling 0.508" [label="" color=blue fontsize=9 penwidth=0.1 style=solid]
+	ready -> "key 4330
+bias -0.376
+h_scaling 0.073" [label=0.004 color=red fontsize=9 penwidth=0.22296987928759487 style=solid]
+	"key 4330
+bias -0.376
+h_scaling 0.073" -> "key 1684
+bias 0.182
+h_scaling 0.996" [label="" color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 4330
+bias -0.376
+h_scaling 0.073" -> "key 4330
+bias -0.376
+h_scaling 0.073" [label=0.047 color=red fontsize=9 penwidth=1.5024187693235325 style=solid]
+	"key 1684
+bias 0.182
+h_scaling 0.996" -> "key 1684
+bias 0.182
+h_scaling 0.996" [label=0.063 color=red fontsize=9 penwidth=1.9900663767187694 style=solid]
+	go -> "key 4330
+bias -0.376
+h_scaling 0.073" [label="" color=blue fontsize=9 penwidth=0.1 style=solid]
+	go -> "key 38342
+bias -0.592
+h_scaling 0.041" [label=0.150 color=red fontsize=9 penwidth=4.588546917472937 style=solid]
+	"key 38342
+bias -0.592
+h_scaling 0.041" -> "key 1684
+bias 0.182
+h_scaling 0.996" [label=0.005 color=red fontsize=9 penwidth=0.2504827327067837 style=solid]
+	"key 38342
+bias -0.592
+h_scaling 0.041" -> "key 27600
+bias -0.798
+h_scaling 0.430" [label=0.021 color=red fontsize=9 penwidth=0.7344042266005933 style=solid]
+}

@@ -1,0 +1,82 @@
+digraph {
+	node [fontsize=9 height=0.10 shape=circle width=0.10]
+	"ready
+output 1.000" [fillcolor=yellow shape=box style=filled]
+	"go
+output 0.000" [fillcolor=green shape=box style=filled]
+	"output
+bias -1.000
+h_scaling 0.515
+output 0.174" [fillcolor=lightblue style=filled]
+	"key 41849
+bias -0.276
+h_scaling 1.000
+output 0.992" [fillcolor=white style=filled]
+	"key 859
+bias -0.539
+h_scaling 0.412
+output 0.269" [fillcolor=white style=filled]
+	"key 860
+bias -0.516
+h_scaling 0.885
+output 0.687" [fillcolor=white style=filled]
+	"go
+output 0.000" -> "key 860
+bias -0.516
+h_scaling 0.885
+output 0.687" [label=-0.992 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 859
+bias -0.539
+h_scaling 0.412
+output 0.269" -> "output
+bias -1.000
+h_scaling 0.515
+output 0.174" [label=0.795 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 860
+bias -0.516
+h_scaling 0.885
+output 0.687" -> "output
+bias -1.000
+h_scaling 0.515
+output 0.174" [label=0.981 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 860
+bias -0.516
+h_scaling 0.885
+output 0.687" -> "key 859
+bias -0.539
+h_scaling 0.412
+output 0.269" [label=0.628 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 860
+bias -0.516
+h_scaling 0.885
+output 0.687" -> "key 860
+bias -0.516
+h_scaling 0.885
+output 0.687" [label=1.109 color=red fontsize=9 penwidth=0.1 style=solid]
+	"ready
+output 1.000" -> "key 41849
+bias -0.276
+h_scaling 1.000
+output 0.992" [label=1.001 color=red fontsize=9 penwidth=0.1 style=solid]
+	"key 41849
+bias -0.276
+h_scaling 1.000
+output 0.992" -> "key 860
+bias -0.516
+h_scaling 0.885
+output 0.687" [label=0.341 color=red fontsize=9 penwidth=0.1 style=solid]
+	"output
+bias -1.000
+h_scaling 0.515
+output 0.174" -> "key 41849
+bias -0.276
+h_scaling 1.000
+output 0.992" [label=-0.223 color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 41849
+bias -0.276
+h_scaling 1.000
+output 0.992" -> "key 41849
+bias -0.276
+h_scaling 1.000
+output 0.992" [label=0.739 color=red fontsize=9 penwidth=0.1 style=solid]
+}

@@ -1,0 +1,66 @@
+digraph {
+	node [fontsize=9 height=0.10 shape=circle width=0.10]
+	ready [fillcolor=yellow shape=box style=filled]
+	go [fillcolor=green shape=box style=filled]
+	"output
+bias -0.280
+h_scaling 0.301" [fillcolor=lightblue style=filled]
+	"key 4578
+bias 0.298
+h_scaling 0.027" [fillcolor=white style=filled]
+	"key 16106
+bias -0.673
+h_scaling 0.314" [fillcolor=white style=filled]
+	"key 4560
+bias -0.777
+h_scaling 0.472" [fillcolor=white style=filled]
+	go -> "key 4560
+bias -0.777
+h_scaling 0.472" [label=0.009 color=red fontsize=9 penwidth=0.3578911884116306 style=solid]
+	"key 4578
+bias 0.298
+h_scaling 0.027" -> "output
+bias -0.280
+h_scaling 0.301" [label=0.028 color=red fontsize=9 penwidth=0.9399982496428972 style=solid]
+	"key 4560
+bias -0.777
+h_scaling 0.472" -> "key 4578
+bias 0.298
+h_scaling 0.027" [label="" color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 4560
+bias -0.777
+h_scaling 0.472" -> "key 4560
+bias -0.777
+h_scaling 0.472" [label=0.037 color=red fontsize=9 penwidth=1.2116965063085945 style=solid]
+	go -> "key 16106
+bias -0.673
+h_scaling 0.314" [label=0.022 color=red fontsize=9 penwidth=0.7746411871644615 style=solid]
+	"key 16106
+bias -0.673
+h_scaling 0.314" -> "key 4560
+bias -0.777
+h_scaling 0.472" [label=0.013 color=red fontsize=9 penwidth=0.48423957852432375 style=solid]
+	"output
+bias -0.280
+h_scaling 0.301" -> "key 16106
+bias -0.673
+h_scaling 0.314" [label=0.018 color=red fontsize=9 penwidth=0.6309654769490439 style=solid]
+	ready -> "key 16106
+bias -0.673
+h_scaling 0.314" [label="" color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 16106
+bias -0.673
+h_scaling 0.314" -> "output
+bias -0.280
+h_scaling 0.301" [label="" color=blue fontsize=9 penwidth=0.1 style=solid]
+	"key 4560
+bias -0.777
+h_scaling 0.472" -> "key 16106
+bias -0.673
+h_scaling 0.314" [label=0.013 color=red fontsize=9 penwidth=0.48423957852432375 style=solid]
+	"key 4560
+bias -0.777
+h_scaling 0.472" -> "output
+bias -0.280
+h_scaling 0.301" [label="" color=blue fontsize=9 penwidth=0.1 style=solid]
+}
