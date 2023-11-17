@@ -1,0 +1,77 @@
+digraph {
+	node [fontsize=9 height=0.10 shape=circle width=0.10]
+	ready [fillcolor=yellow shape=box style=filled]
+	go [fillcolor=green shape=box style=filled]
+	"output
+bias -0.698
+h_scaling 0.835" [fillcolor=lightblue style=filled]
+	"key 92259
+bias -0.511
+h_scaling 0.597" [fillcolor=white style=filled]
+	"key 8277
+bias -0.990
+h_scaling 0.977" [fillcolor=white style=filled]
+	"key 960
+bias -0.441
+h_scaling 0.229" [fillcolor=white style=filled]
+	go -> "key 960
+bias -0.441
+h_scaling 0.229" [label=-0.737 color=blue fontsize=9 penwidth=2.3112392328816487 style=solid]
+	"key 960
+bias -0.441
+h_scaling 0.229" -> "key 8277
+bias -0.990
+h_scaling 0.977" [label=0.929 color=red fontsize=9 penwidth=2.888460515746828 style=solid]
+	"key 8277
+bias -0.990
+h_scaling 0.977" -> "output
+bias -0.698
+h_scaling 0.835" [label=1.000 color=red fontsize=9 penwidth=3.1 style=solid]
+	"key 960
+bias -0.441
+h_scaling 0.229" -> "key 960
+bias -0.441
+h_scaling 0.229" [label=0.850 color=red fontsize=9 penwidth=2.6499844472087637 style=solid]
+	go -> "key 8277
+bias -0.990
+h_scaling 0.977" [label=-0.973 color=blue fontsize=9 penwidth=3.019099497852084 style=solid]
+	"output
+bias -0.698
+h_scaling 0.835" -> "key 8277
+bias -0.990
+h_scaling 0.977" [label=-0.526 color=blue fontsize=9 penwidth=1.6766211837240443 style=solid]
+	"key 8277
+bias -0.990
+h_scaling 0.977" -> "key 8277
+bias -0.990
+h_scaling 0.977" [label=1.000 color=red fontsize=9 penwidth=3.1 style=solid]
+	ready -> "key 92259
+bias -0.511
+h_scaling 0.597" [label=1.000 color=red fontsize=9 penwidth=3.1 style=solid]
+	"key 92259
+bias -0.511
+h_scaling 0.597" -> "key 960
+bias -0.441
+h_scaling 0.229" [label=0.222 color=red fontsize=9 penwidth=0.7658805819857346 style=solid]
+	"key 92259
+bias -0.511
+h_scaling 0.597" -> "key 92259
+bias -0.511
+h_scaling 0.597" [label=0.810 color=red fontsize=9 penwidth=2.5291134560241533 style=solid]
+	"output
+bias -0.698
+h_scaling 0.835" -> "key 92259
+bias -0.511
+h_scaling 0.597" [label=-0.127 color=blue fontsize=9 penwidth=0.4816991148513342 style=solid]
+	ready -> "key 8277
+bias -0.990
+h_scaling 0.977" [label=0.320 color=red fontsize=9 penwidth=1.0595469424535116 style=solid]
+	"key 92259
+bias -0.511
+h_scaling 0.597" -> "key 8277
+bias -0.990
+h_scaling 0.977" [label=0.323 color=red fontsize=9 penwidth=1.0694412291361068 style=solid]
+	go -> "key 92259
+bias -0.511
+h_scaling 0.597" [label=0.099 color=red fontsize=9 penwidth=0.39589838141840605 style=solid]
+}
