@@ -79,19 +79,14 @@ class HebbianRecurrentNetwork(object):
             # print(self.hebbian_buffer)
             # print(hebbians)
             link_buffer = []
+            node_weight_sum = 0
             for i, w, h in links:
                 # This is ugly, and could be done much cleaner
                 input_val = self.ovalues[i] - self.__firing_threshold
                 output_val = self.ovalues[node] - self.__firing_threshold
                 # if w + response * hebbians[i] >= 0:
                 if w >= 0:
-                    if input_val > 0 and output_val > 0:
-                        self.hebbian_buffer[node][i] = (
-                            1 - learning_rate
-                        ) * self.hebbian_buffer[node][i] + learning_rate * (
-                            update_factor * input_val * output_val
-                        )
-                    elif input_val > 0 or output_val > 0:
+                    if input_val > 0 or output_val > 0:
                         self.hebbian_buffer[node][i] = (
                             1 - learning_rate
                         ) * self.hebbian_buffer[node][i] + learning_rate * (
@@ -100,8 +95,8 @@ class HebbianRecurrentNetwork(object):
                     # else:
                     #     self.hebbian_buffer[node][i] = (
                     #         1 - learning_rate
-                    #     ) * self.hebbian_buffer[node][i] + learning_rate * (
-                    #         update_factor * input_val * output_val - self.__firing_threshold
+                    #     ) * self.hebbian_buffer[node][i] - learning_rate * (
+                    #         update_factor * input_val * output_val
                     #     )
                     if apply:
                         h = max(
@@ -114,11 +109,12 @@ class HebbianRecurrentNetwork(object):
                         if abs(w) + h * response < 0:
                             h += (abs(w) - h * response) / response
                         self.hebbian_buffer[node][i] = h
-            node_sum = sum(self.hebbian_buffer[node].values(), 0.0)
-            if node_sum > 1.0:
-                self.hebbian_buffer[node] = {
-                    k: v / node_sum for k, v in self.hebbian_buffer[node].items()
-                }
+                # node_weight_sum += w + h * response
+            #     node_weight_sum += h * response
+            # if node_weight_sum > 1.0:
+            #     self.hebbian_buffer[node] = {
+            #         k: v / node_weight_sum for k, v in self.hebbian_buffer[node].items()
+            #     }
 
         if apply:
             self.hebbian_update_log.append([copy.deepcopy(self.hebbian_buffer)])

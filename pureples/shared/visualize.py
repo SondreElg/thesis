@@ -122,7 +122,7 @@ def draw_net(
                 else:
                     std = connection_std.iloc[0]["std"]
                     label = "{:.3f}".format(std)
-                    width = str(0.1 + abs(std * 30))
+                    width = str(0.1 + abs(std * 35))
             elif hebbians:
                 label = "{:.3f}".format(
                     hebbians[hebbian_trial_index][0].get(output, {}).get(input, 0)
@@ -131,7 +131,7 @@ def draw_net(
                 )
             else:
                 label = "{:.3f}".format(cg.weight)
-                width = str(0.1 + abs(cg.weight * 3))
+                width = str(0.1 + abs(cg.weight * 3.5))
             dot.edge(
                 a,
                 b,
@@ -311,13 +311,17 @@ def draw_hebbian(
         [(t, 0.0) for t in net.input_nodes] + [(t[0], t[4]) for t in net.node_evals],
         columns=["node", "response"],
     )
+    outgoing_nodes = df["prior_node"].unique()
+    outgoing_nodes = outgoing_nodes[np.argsort(np.abs(outgoing_nodes))]
 
     # Calculate the number of rows needed for a 3-column layout
-    num_nodes = len(node_df)
+    num_nodes = len(outgoing_nodes)
     num_rows = (
         num_nodes + 2
     ) // 3  # Add 2 to ensure that we have enough rows for all nodes
     # Create subplots in a 3xN grid
+    if num_rows == 0:
+        return
     fig, axes = plt.subplots(
         num_rows, 3, figsize=(15, num_rows * 5), sharey=True
     )  # Adjust the figsize as necessary
@@ -325,11 +329,10 @@ def draw_hebbian(
 
     # Flatten the axes array for easy iteration
     axes = axes.flatten()
-    outgoing_nodes = df["prior_node"].unique()
-    for idx, node in node_df.iterrows():
+    for idx, node in enumerate(outgoing_nodes):
         # Plot each node in its respective subplot
         # axes[idx].plot(df.index, node_df[node], label=node)
-        current_node = int(node["node"])
+        current_node = node
         if current_node in outgoing_nodes:
             axes[idx].set_title(
                 node_names[current_node]
@@ -337,7 +340,8 @@ def draw_hebbian(
                 else f"Node {current_node}"
             )
             axes[idx].set_xlabel("Trial")
-            axes[idx].set_ylabel("Magnitude")
+            if idx % 3 == 0:
+                axes[idx].set_ylabel("Magnitude")
             to_plot = df[df["prior_node"] == current_node].reset_index(drop=True)
             for posterior, group in to_plot.groupby(["posterior_node"]):
                 axes[idx].plot(
@@ -369,7 +373,7 @@ def draw_hebbian(
     plt.close()
 
 
-def plot_hebbian_correlation_heatmap(csv_file_path, mapping_list):
+def plot_hebbian_correlation_heatmap(csv_file_path, mapping_list, filename):
     # Load the CSV file
     df = pd.read_csv(csv_file_path)
 
@@ -379,21 +383,21 @@ def plot_hebbian_correlation_heatmap(csv_file_path, mapping_list):
         {"prior_node": node_renaming, "posterior_node": node_renaming}, inplace=True
     )
 
-    # For every 50 trials, take the average of trials 40-50
+    # For every 50 trials, take the average of trials 10-50
     df["trial_group"] = df["trial"] // 50
-    filtered_df = df[(df["trial"] % 50 >= 40) & (df["trial"] % 50 <= 49)]
+    filtered_df = df[(df["trial"] % 50 >= 10) & (df["trial"] % 50 <= 49)]
     average_df = (
         filtered_df.groupby(["trial_group", "prior_node", "posterior_node"])
         .agg(avg_weight=("weight", "mean"))
         .reset_index()
     )
 
-    # Map each trial group to an entry in the provided mapping list
+    # Map each trial group to an entry in the mapping list
     average_df["mapped_value"] = average_df["trial_group"].apply(
         lambda x: mapping_list[x % len(mapping_list)]
     )
 
-    # Calculate the correlation
+    # Calculate the correlation for each pair of 'prior_node' and 'posterior_node'
     grouped = (
         average_df.groupby(["prior_node", "posterior_node"])
         .apply(lambda g: g["mapped_value"].corr(g["avg_weight"]))
@@ -404,8 +408,8 @@ def plot_hebbian_correlation_heatmap(csv_file_path, mapping_list):
     # Create a pivot table for the heatmap
     pivot_table = grouped.pivot("prior_node", "posterior_node", "correlation")
 
-    # Plot the heatmap
-    plt.figure(figsize=(12, 10))
+    # Plotting the heatmap
+    fig = plt.figure(figsize=(12, 10))
     sns.heatmap(
         pivot_table,
         cmap="coolwarm",
@@ -416,7 +420,10 @@ def plot_hebbian_correlation_heatmap(csv_file_path, mapping_list):
     )
     plt.xlabel("Posterior Node")
     plt.ylabel("Prior Node")
-    plt.show()
+    fig.savefig(
+        filename,
+        dpi=300,
+    )
 
 
 def draw_omission_trials(omission_outputs, filename):
@@ -424,6 +431,8 @@ def draw_omission_trials(omission_outputs, filename):
     for index, outputs in enumerate(omission_outputs):
         plt.plot(outputs, label=f"foreperiod {index+1}")
     lgd = plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
+    plt.xlabel("timestep")
+    plt.ylabel("magnitude")
     fig.savefig(
         filename,
         dpi=300,
@@ -589,7 +598,7 @@ def draw_output(
             plt.close()
             if network and test_names[test] in [
                 "trial_last",
-                "trial_first",
+                # "trial_first",
                 "go_omitted",
             ]:
                 save_dir = (

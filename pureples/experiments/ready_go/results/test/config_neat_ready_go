@@ -22,7 +22,7 @@ bias_init_mean = 0.0
 bias_init_stdev = 1.0
 bias_max_value = 1.0
 bias_min_value = -1.0
-bias_mutate_power = 0.02
+bias_mutate_power = 0.01
 bias_mutate_rate = 0.7
 bias_replace_rate = 0.05
 
@@ -53,10 +53,10 @@ num_outputs = 1
 # node response options
 # parameter has been repurposed as a hebbian scaling factor
 response_init_mean = 0.5
-response_init_stdev = 0.5
+response_init_stdev = 0.2
 response_max_value = 1.0
 response_min_value = 0.0
-response_mutate_power = 0.02
+response_mutate_power = 0.01
 response_mutate_rate = 0.8
 response_replace_rate = 0.05
 
@@ -65,12 +65,12 @@ weight_init_mean = 0.0
 weight_init_stdev = 0.5
 weight_max_value = 1.0
 weight_min_value = -1.0
-weight_mutate_power = 0.02
-weight_mutate_rate = 0.08
+weight_mutate_power = 0.05
+weight_mutate_rate = 0.0
 weight_replace_rate = 0.05
 
 [DefaultSpeciesSet]
-compatibility_threshold = 3.2
+compatibility_threshold = 3.0
 
 [DefaultStagnation]
 species_fitness_func = max
@@ -78,5 +78,5 @@ max_stagnation = 100
 species_elitism = 10
 
 [DefaultReproduction]
-elitism = 3
+elitism = 10
 survival_threshold = 0.2

@@ -22,6 +22,7 @@ from pureples.shared.visualize import (
     draw_output,
     draw_hebbian,
     draw_omission_trials,
+    plot_hebbian_correlation_heatmap,
 )
 from pureples.shared.ready_go import ready_go_list, foreperiod_rg_list
 from pureples.shared.population_plus import Population
@@ -96,7 +97,7 @@ training_setup = {
         #     {"loc": 4, "scale": 0},
         #     {"loc": 5, "scale": 0},
         # ],
-        args.flip_pad_data,
+        bool(int(args.flip_pad_data)),
         json.loads(args.ordering),
     ],
 }
@@ -170,7 +171,7 @@ def run_rnn(
         network_fitness[block] = np.nanmean(fitness)
         if visualize:
             foreperiod = np.where(np.array(inputs) == 2)[0][0]
-            foreperiods[block] = foreperiod - 1
+            foreperiods[block] = foreperiod
             if end_tests:
                 indices = np.asarray(np.where(np.array(inputs) == 1))[0]
                 omission_trial_outputs[block] = outputs[
@@ -206,6 +207,11 @@ def run_rnn(
         draw_omission_trials(
             omission_trial_outputs[np.argsort(foreperiods[:blocks_of_interest])],
             f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/omission_trials.png",
+        )
+        plot_hebbian_correlation_heatmap(
+            f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/block{blocks_of_interest}_fp{foreperiods[blocks_of_interest-1]}_hebbian.csv",
+            foreperiods,
+            f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/hebbian_correlation_heatmap.png",
         )
     return np.mean(network_fitness)
 
