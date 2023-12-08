@@ -18,6 +18,17 @@ First, make sure you have the dependencies installed: `numpy`, `neat-python`, `g
 All the above can be installed using [pip](https://pip.pypa.io/en/stable/installing/).  
 Next, download the source code and run `setup.py` (`pip install .`) from the root folder.
 
+### Organization
+The code used for running the different versions of NEAT used in the thesis are found in [pureples/experiments/ready_go](pureples/experiments/ready_go).
+Within this folder you also find the [results](pureples/experiments/ready_go/results) folder containing the experiment results, while [thesis_networks](pureples/experiments/ready_go/thesis_networks/) contains the specific networks used in the thesis (net-a, b, c2 and d).
+
+Code shared between the different versions of NEAT, as well as the Ready-Go experiment, are found in [pureples/shared](pureples/shared/).
+
+### Running Networks
+You can run your chosen NEAT variant through the terminal, though I recommend [hebbian_neat_ready_go.py](pureples/experiments/ready_go/hebbian_neat_ready_go.py), as that is the most up to date. 
+
+A number of command-line arguments will modify the behaviour of NEAT, in addition to the config files.
+
 | Argument              | Default                                              | Effect                                                                                                                                                                                                                                                                                                                                                 |
 | --------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | gens                  | 1                                                    | The number of generations to run NEAT for                                                                                                                                                                                                                                                                                                              |
@@ -41,19 +52,7 @@ Next, download the source code and run `setup.py` (`pip install .`) from the roo
 | model                 | "rnn"                                                | Which network model to use when running NEAT. "rnn" is a standard Recurrent Neural Networks. "iznn" is an Izhikevich Spiking Neural Network. "rnn_d" is a Recurrent Neural Network activity holdover between trials.                                                                                                                                   |
 
 
-### Organization
-The code used for running the different versions of NEAT used in the thesis are found in [pureples/experiments/ready_go](pureples/experiments/ready_go).
-Within this folder you also find the [results](pureples/experiments/ready_go/results) folder containing the experiment results, while [thesis_networks](pureples/experiments/ready_go/thesis_networks/) contains the specific networks used in the thesis (net-a, b, c2 and d).
-
-Code shared between the different versions of NEAT, as well as the Ready-Go experiment, are found in [pureples/shared](pureples/shared/).
-
-### Running Networks
-You can run your chosen NEAT variant through the terminal, though I recommend [hebbian_neat_ready_go.py](pureples/experiments/ready_go/hebbian_neat_ready_go.py), as that is the most up to date. 
-
-A nunmber of command-line arguments will modify the behaviour of NEAT, in addition to the config files.
-
-
-### Experimenting
+### General Experimentation
 How to experiment using NEAT will not be described, since this is the responsibility of the `neat-python` library.
 
 Setting up an experiment for **HyperNEAT**:
