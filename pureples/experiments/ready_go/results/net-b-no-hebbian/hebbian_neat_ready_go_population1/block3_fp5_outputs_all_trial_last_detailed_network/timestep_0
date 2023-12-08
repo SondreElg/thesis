@@ -11,7 +11,7 @@ output 0.023" [fillcolor=lightblue style=filled]
 	"key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" [fillcolor=white style=filled]
+output 0.123" [fillcolor=white style=filled]
 	"key 2923
 bias 0.457
 &#945; 0.973
@@ -53,7 +53,7 @@ output 0.981" [label=0.791 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" -> "key 2923
+output 0.123" -> "key 2923
 bias 0.457
 &#945; 0.973
 output 0.981" [label=-0.967 color=blue fontsize=9 penwidth=0.1 style=solid]
@@ -61,28 +61,28 @@ output 0.981" [label=-0.967 color=blue fontsize=9 penwidth=0.1 style=solid]
 output 0.000" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" [label=-0.935 color=blue fontsize=9 penwidth=0.1 style=solid]
+output 0.123" [label=-0.935 color=blue fontsize=9 penwidth=0.1 style=solid]
 	"key 69010
 bias -0.093
 &#945; 0.960
 output 0.644" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" [label=0.428 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.123" [label=0.428 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" -> "key 42178
+output 0.123" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" [label=0.946 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.123" [label=0.946 color=red fontsize=9 penwidth=0.1 style=solid]
 	"output
 bias 0.227
 &#945; 0.438
 output 0.023" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" [label=-0.860 color=blue fontsize=9 penwidth=0.1 style=solid]
+output 0.123" [label=-0.860 color=blue fontsize=9 penwidth=0.1 style=solid]
 	"ready
 output 1.000" -> "key 131602
 bias -0.581
@@ -108,7 +108,7 @@ bias -0.581
 output 0.942" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" [label=0.231 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.123" [label=0.231 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 131602
 bias -0.581
 &#945; 0.026
@@ -124,7 +124,7 @@ output 0.981" [label=-0.361 color=blue fontsize=9 penwidth=0.1 style=solid]
 	"key 42178
 bias -0.735
 &#945; 0.730
-output 0.124" -> "output
+output 0.123" -> "output
 bias 0.227
 &#945; 0.438
 output 0.023" [label=0.204 color=red fontsize=9 penwidth=0.1 style=solid]

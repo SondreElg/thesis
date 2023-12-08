@@ -31,14 +31,14 @@ output 0.006" [label=-1.000 color=blue fontsize=9 penwidth=0.1 style=solid]
 output 0.000" -> "key 7184
 bias -0.116
 &#945; 0.962
-output 0.829" [label=0.959 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.829" [label=0.958 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 7184
 bias -0.116
 &#945; 0.962
 output 0.829" -> "key 7184
 bias -0.116
 &#945; 0.962
-output 0.829" [label=1.159 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.829" [label=1.160 color=red fontsize=9 penwidth=0.1 style=solid]
 	"ready
 output 0.000" -> "key 7184
 bias -0.116
@@ -81,7 +81,7 @@ bias 0.037
 output 0.055" -> "output
 bias -0.204
 &#945; 0.938
-output 0.006" [label=0.966 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.006" [label=0.965 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 7184
 bias -0.116
 &#945; 0.962

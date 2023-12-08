@@ -1,5 +1,5 @@
 Key: 4235884
-Fitness: 0.981970891560631
+Fitness: 0.9810255792086006
 Nodes:
 	0 DefaultNodeGene(key=0, bias=0.5605286508697698, response=0.3321374588476077, activation=sigmoid, aggregation=sum)
 	100 DefaultNodeGene(key=100, bias=-0.3833411117063456, response=0.6359941690683341, activation=sigmoid, aggregation=sum)

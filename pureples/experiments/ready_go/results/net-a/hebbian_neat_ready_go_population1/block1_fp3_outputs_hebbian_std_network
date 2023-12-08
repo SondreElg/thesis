@@ -21,18 +21,18 @@ bias -0.204
 &#945; 0.938" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]
 	go -> "key 7184
 bias -0.116
-&#945; 0.962" [label=0.003 color=red fontsize=9 penwidth=0.2176118718139874 style=solid]
+&#945; 0.962" [label=0.007 color=red fontsize=9 penwidth=0.35755376754232016 style=solid]
 	"key 7184
 bias -0.116
 &#945; 0.962" -> "key 7184
 bias -0.116
-&#945; 0.962" [label=0.036 color=red fontsize=9 penwidth=1.3620797680242314 style=solid]
+&#945; 0.962" [label=0.035 color=red fontsize=9 penwidth=1.340899221086663 style=solid]
 	ready -> "key 7184
 bias -0.116
 &#945; 0.962" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]
 	ready -> "key 18515
 bias -0.440
-&#945; 0.396" [label=0.002 color=red fontsize=9 penwidth=0.1532977334901329 style=solid]
+&#945; 0.396" [label=0.002 color=red fontsize=9 penwidth=0.17109909094317594 style=solid]
 	"key 18515
 bias -0.440
 &#945; 0.396" -> "key 7184
@@ -42,7 +42,7 @@ bias -0.116
 bias -0.440
 &#945; 0.396" -> "key 18515
 bias -0.440
-&#945; 0.396" [label=0.035 color=red fontsize=9 penwidth=1.3199936453914733 style=solid]
+&#945; 0.396" [label=0.035 color=red fontsize=9 penwidth=1.3199876494300677 style=solid]
 	"output
 bias -0.204
 &#945; 0.938" -> "key 18515
@@ -55,7 +55,7 @@ bias -0.440
 bias 0.037
 &#945; 0.241" -> "output
 bias -0.204
-&#945; 0.938" [label=0.019 color=red fontsize=9 penwidth=0.7675936891853475 style=solid]
+&#945; 0.938" [label=0.019 color=red fontsize=9 penwidth=0.7759259812578045 style=solid]
 	"key 7184
 bias -0.116
 &#945; 0.962" -> "key 117952
@@ -65,10 +65,10 @@ bias 0.037
 bias 0.037
 &#945; 0.241" -> "key 117952
 bias 0.037
-&#945; 0.241" [label=0.014 color=red fontsize=9 penwidth=0.5793897126082985 style=solid]
+&#945; 0.241" [label=0.013 color=red fontsize=9 penwidth=0.5541371866649875 style=solid]
 	ready -> "key 117952
 bias 0.037
-&#945; 0.241" [label=0.013 color=red fontsize=9 penwidth=0.570961451245831 style=solid]
+&#945; 0.241" [label=0.013 color=red fontsize=9 penwidth=0.5719600258911194 style=solid]
 	go -> "key 117952
 bias 0.037
 &#945; 0.241" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]
@@ -76,7 +76,7 @@ bias 0.037
 bias -0.440
 &#945; 0.396" -> "key 117952
 bias 0.037
-&#945; 0.241" [label=0.010 color=red fontsize=9 penwidth=0.4524200567564406 style=solid]
+&#945; 0.241" [label=0.010 color=red fontsize=9 penwidth=0.4664986419928536 style=solid]
 	"output
 bias -0.204
 &#945; 0.938" -> "key 117952

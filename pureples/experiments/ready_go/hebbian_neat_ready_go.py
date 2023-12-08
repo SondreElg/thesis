@@ -138,6 +138,7 @@ def run_rnn(
     omission_trial_outputs = np.empty((blocks, cycle_len), dtype=object)
     foreperiods = np.empty((blocks), dtype=int)
 
+    blocks_of_interest = 1 + blocks // 2 if args.flip_pad_data else blocks
     for inputs, expected_output in ready_go_data:
         trial = 0
         timesteps = len(inputs)
@@ -169,7 +170,7 @@ def run_rnn(
             if trial >= 6 and training:
                 fitness[index] = last_fitness
         network_fitness[block] = np.nanmean(fitness)
-        if visualize:
+        if visualize and block < blocks_of_interest:
             foreperiod = np.where(np.array(inputs) == 2)[0][0]
             foreperiods[block] = foreperiod
             if end_tests:
@@ -203,16 +204,16 @@ def run_rnn(
             )
         block += 1
     if visualize and end_tests:
-        blocks_of_interest = 1 + blocks // 2 if args.flip_pad_data else blocks
         draw_omission_trials(
             omission_trial_outputs[np.argsort(foreperiods[:blocks_of_interest])],
             f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/omission_trials.png",
         )
-        plot_hebbian_correlation_heatmap(
-            f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/block{blocks_of_interest}_fp{foreperiods[blocks_of_interest-1]}_hebbian.csv",
-            foreperiods,
-            f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/hebbian_correlation_heatmap.png",
-        )
+        if CONFIG.learning_rate > 0:
+            plot_hebbian_correlation_heatmap(
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/block{blocks_of_interest}_fp{foreperiods[blocks_of_interest-1]}_hebbian.csv",
+                foreperiods,
+                f"pureples/experiments/ready_go/results/{folder_name}/hebbian_neat_ready_go_population{key}/hebbian_correlation_heatmap.png",
+            )
     return np.mean(network_fitness)
 
 

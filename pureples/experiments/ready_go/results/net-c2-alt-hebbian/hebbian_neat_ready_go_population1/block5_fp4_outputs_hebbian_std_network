@@ -23,7 +23,7 @@ bias 0.561
 bias -0.383
 &#945; 0.636" -> "key 6493
 bias -0.642
-&#945; 0.130" [label=0.041 color=red fontsize=9 penwidth=1.5355403837068975 style=solid]
+&#945; 0.130" [label=0.040 color=red fontsize=9 penwidth=1.4920101370513281 style=solid]
 	"key 6493
 bias -0.642
 &#945; 0.130" -> "output
@@ -31,15 +31,15 @@ bias 0.561
 &#945; 0.332" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]
 	go -> "key 100
 bias -0.383
-&#945; 0.636" [label=0.012 color=red fontsize=9 penwidth=0.5078662111911388 style=solid]
+&#945; 0.636" [label=0.012 color=red fontsize=9 penwidth=0.5366682775579141 style=solid]
 	"key 100
 bias -0.383
 &#945; 0.636" -> "key 100
 bias -0.383
-&#945; 0.636" [label=0.052 color=red fontsize=9 penwidth=1.913115421320004 style=solid]
+&#945; 0.636" [label=0.051 color=red fontsize=9 penwidth=1.898694654348457 style=solid]
 	ready -> "key 8493
 bias -0.453
-&#945; 0.406" [label=0.003 color=red fontsize=9 penwidth=0.21243765384785207 style=solid]
+&#945; 0.406" [label=0.003 color=red fontsize=9 penwidth=0.21298608571484295 style=solid]
 	"key 8493
 bias -0.453
 &#945; 0.406" -> "key 100
@@ -49,7 +49,7 @@ bias -0.383
 bias -0.642
 &#945; 0.130" -> "key 6493
 bias -0.642
-&#945; 0.130" [label=0.045 color=red fontsize=9 penwidth=1.6731244811344126 style=solid]
+&#945; 0.130" [label=0.046 color=red fontsize=9 penwidth=1.7233586223200885 style=solid]
 	"output
 bias 0.561
 &#945; 0.332" -> "key 8493
@@ -57,12 +57,12 @@ bias -0.453
 &#945; 0.406" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]
 	go -> "key 6493
 bias -0.642
-&#945; 0.130" [label=0.020 color=red fontsize=9 penwidth=0.7866906342867871 style=solid]
+&#945; 0.130" [label=0.020 color=red fontsize=9 penwidth=0.8011990096520087 style=solid]
 	"key 8493
 bias -0.453
 &#945; 0.406" -> "key 8493
 bias -0.453
-&#945; 0.406" [label=0.016 color=red fontsize=9 penwidth=0.6658094164754768 style=solid]
+&#945; 0.406" [label=0.016 color=red fontsize=9 penwidth=0.6584078356614043 style=solid]
 	ready -> "key 6493
 bias -0.642
 &#945; 0.130" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]

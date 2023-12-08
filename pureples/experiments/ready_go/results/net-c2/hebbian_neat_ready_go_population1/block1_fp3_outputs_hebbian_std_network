@@ -23,7 +23,7 @@ bias 0.561
 bias -0.383
 &#945; 0.636" -> "key 6493
 bias -0.642
-&#945; 0.130" [label=0.001 color=red fontsize=9 penwidth=0.12272825176990981 style=solid]
+&#945; 0.130" [label=0.038 color=red fontsize=9 penwidth=1.4423067162985275 style=solid]
 	"key 6493
 bias -0.642
 &#945; 0.130" -> "output
@@ -31,15 +31,15 @@ bias 0.561
 &#945; 0.332" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]
 	go -> "key 100
 bias -0.383
-&#945; 0.636" [label=0.001 color=red fontsize=9 penwidth=0.11973418374926009 style=solid]
+&#945; 0.636" [label=0.005 color=red fontsize=9 penwidth=0.27942256567933615 style=solid]
 	"key 100
 bias -0.383
 &#945; 0.636" -> "key 100
 bias -0.383
-&#945; 0.636" [label=0.000 color=red fontsize=9 penwidth=0.11418107498307406 style=solid]
+&#945; 0.636" [label=0.036 color=red fontsize=9 penwidth=1.3522171101917775 style=solid]
 	ready -> "key 8493
 bias -0.453
-&#945; 0.406" [label=0.000 color=red fontsize=9 penwidth=0.1069414605781302 style=solid]
+&#945; 0.406" [label=0.002 color=red fontsize=9 penwidth=0.16881342228068547 style=solid]
 	"key 8493
 bias -0.453
 &#945; 0.406" -> "key 100
@@ -49,7 +49,7 @@ bias -0.383
 bias -0.642
 &#945; 0.130" -> "key 6493
 bias -0.642
-&#945; 0.130" [label=0.002 color=red fontsize=9 penwidth=0.1564816865888495 style=solid]
+&#945; 0.130" [label=0.054 color=red fontsize=9 penwidth=1.9766965371210206 style=solid]
 	"output
 bias 0.561
 &#945; 0.332" -> "key 8493
@@ -57,12 +57,12 @@ bias -0.453
 &#945; 0.406" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]
 	go -> "key 6493
 bias -0.642
-&#945; 0.130" [label=0.001 color=red fontsize=9 penwidth=0.12194826717382529 style=solid]
+&#945; 0.130" [label=0.005 color=red fontsize=9 penwidth=0.2616139039399725 style=solid]
 	"key 8493
 bias -0.453
 &#945; 0.406" -> "key 8493
 bias -0.453
-&#945; 0.406" [label=0.001 color=red fontsize=9 penwidth=0.1306829913627794 style=solid]
+&#945; 0.406" [label=0.030 color=red fontsize=9 penwidth=1.1539869142668409 style=solid]
 	ready -> "key 6493
 bias -0.642
 &#945; 0.130" [label="    " color=blue fontsize=9 penwidth=0.1 style=solid]

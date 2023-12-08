@@ -7,11 +7,11 @@ output 0.000" [fillcolor=green shape=box style=filled]
 	"output
 bias 0.227
 &#945; 0.438
-output 0.045" [fillcolor=lightblue style=filled]
+output 0.038" [fillcolor=lightblue style=filled]
 	"key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" [fillcolor=white style=filled]
+output 0.031" [fillcolor=white style=filled]
 	"key 2923
 bias 0.457
 &#945; 0.973
@@ -19,41 +19,41 @@ output 0.996" [fillcolor=white style=filled]
 	"key 131602
 bias -0.581
 &#945; 0.026
-output 0.288" [fillcolor=white style=filled]
+output 0.257" [fillcolor=white style=filled]
 	"key 69010
 bias -0.093
 &#945; 0.960
-output 0.889" [fillcolor=white style=filled]
+output 0.871" [fillcolor=white style=filled]
 	"key 2923
 bias 0.457
 &#945; 0.973
 output 0.996" -> "output
 bias 0.227
 &#945; 0.438
-output 0.045" [label=-0.983 color=blue fontsize=9 penwidth=0.1 style=solid]
+output 0.038" [label=-0.983 color=blue fontsize=9 penwidth=0.1 style=solid]
 	"go
 output 0.000" -> "key 2923
 bias 0.457
 &#945; 0.973
-output 0.996" [label=0.942 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.996" [label=0.930 color=red fontsize=9 penwidth=0.1 style=solid]
 	"output
 bias 0.227
 &#945; 0.438
-output 0.045" -> "key 2923
+output 0.038" -> "key 2923
 bias 0.457
 &#945; 0.973
-output 0.996" [label=0.490 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.996" [label=0.482 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 2923
 bias 0.457
 &#945; 0.973
 output 0.996" -> "key 2923
 bias 0.457
 &#945; 0.973
-output 0.996" [label=1.209 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.996" [label=1.224 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" -> "key 2923
+output 0.031" -> "key 2923
 bias 0.457
 &#945; 0.973
 output 0.996" [label=-0.967 color=blue fontsize=9 penwidth=0.1 style=solid]
@@ -61,61 +61,61 @@ output 0.996" [label=-0.967 color=blue fontsize=9 penwidth=0.1 style=solid]
 output 0.000" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" [label=-0.935 color=blue fontsize=9 penwidth=0.1 style=solid]
+output 0.031" [label=-0.935 color=blue fontsize=9 penwidth=0.1 style=solid]
 	"key 69010
 bias -0.093
 &#945; 0.960
-output 0.889" -> "key 42178
+output 0.871" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" [label=0.539 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.031" [label=0.531 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" -> "key 42178
+output 0.031" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" [label=1.133 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.031" [label=1.128 color=red fontsize=9 penwidth=0.1 style=solid]
 	"output
 bias 0.227
 &#945; 0.438
-output 0.045" -> "key 42178
+output 0.038" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" [label=-0.860 color=blue fontsize=9 penwidth=0.1 style=solid]
+output 0.031" [label=-0.860 color=blue fontsize=9 penwidth=0.1 style=solid]
 	"ready
 output 0.000" -> "key 131602
 bias -0.581
 &#945; 0.026
-output 0.288" [label=1.001 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.257" [label=1.001 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 131602
 bias -0.581
 &#945; 0.026
-output 0.288" -> "key 2923
+output 0.257" -> "key 2923
 bias 0.457
 &#945; 0.973
 output 0.996" [label=-0.677 color=blue fontsize=9 penwidth=0.1 style=solid]
 	"key 131602
 bias -0.581
 &#945; 0.026
-output 0.288" -> "key 131602
+output 0.257" -> "key 131602
 bias -0.581
 &#945; 0.026
-output 0.288" [label=0.922 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.257" [label=0.922 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 131602
 bias -0.581
 &#945; 0.026
-output 0.288" -> "key 42178
+output 0.257" -> "key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" [label=0.310 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.031" [label=0.305 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 131602
 bias -0.581
 &#945; 0.026
-output 0.288" -> "key 69010
+output 0.257" -> "key 69010
 bias -0.093
 &#945; 0.960
-output 0.889" [label=1.220 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.871" [label=1.203 color=red fontsize=9 penwidth=0.1 style=solid]
 	"ready
 output 0.000" -> "key 2923
 bias 0.457
@@ -124,15 +124,15 @@ output 0.996" [label=-0.361 color=blue fontsize=9 penwidth=0.1 style=solid]
 	"key 42178
 bias -0.735
 &#945; 0.730
-output 0.025" -> "output
+output 0.031" -> "output
 bias 0.227
 &#945; 0.438
-output 0.045" [label=0.188 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.038" [label=0.188 color=red fontsize=9 penwidth=0.1 style=solid]
 	"key 69010
 bias -0.093
 &#945; 0.960
-output 0.889" -> "key 69010
+output 0.871" -> "key 69010
 bias -0.093
 &#945; 0.960
-output 0.889" [label=0.547 color=red fontsize=9 penwidth=0.1 style=solid]
+output 0.871" [label=0.534 color=red fontsize=9 penwidth=0.1 style=solid]
 }

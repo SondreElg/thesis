@@ -299,13 +299,15 @@ def draw_hebbian(
     hebbian = net.hebbian_update_log
     fig = plt.figure()
 
-    df = hebbian_to_dataframe(hebbian)
-    df.to_csv(filename.split(".")[0] + ".csv")
+    unfiltered_df = hebbian_to_dataframe(hebbian)
 
-    std = get_hebbian_std(df)
-    filtered_columns = std[std["std"] > 0.001][["prior_node", "posterior_node"]]
+    std = get_hebbian_std(unfiltered_df)
+    filtered_columns = std[std["std"] != 0.0][["prior_node", "posterior_node"]]
     df = pd.merge(
-        df, filtered_columns, on=["prior_node", "posterior_node"], how="inner"
+        unfiltered_df,
+        filtered_columns,
+        on=["prior_node", "posterior_node"],
+        how="inner",
     )
     node_df = pd.DataFrame(
         [(t, 0.0) for t in net.input_nodes] + [(t[0], t[4]) for t in net.node_evals],
@@ -319,9 +321,13 @@ def draw_hebbian(
     num_rows = (
         num_nodes + 2
     ) // 3  # Add 2 to ensure that we have enough rows for all nodes
-    # Create subplots in a 3xN grid
+
+    # Don't plot if there are no Hebbian changes
     if num_rows == 0:
         return
+    unfiltered_df.to_csv(filename.split(".")[0] + ".csv")
+
+    # Create subplots in a 3xN grid
     fig, axes = plt.subplots(
         num_rows, 3, figsize=(15, num_rows * 5), sharey=True
     )  # Adjust the figsize as necessary
