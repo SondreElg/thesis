@@ -3,15 +3,16 @@ from setuptools import setup
 setup(
     name="pureples",
     version="0.0",
-    author="adrian, simon",
-    author_email="mail@adrianwesth.dk",
-    maintainer="simon, adrian",
-    maintainer_email="mail@adrianwesth.dk",
-    url="https://github.com/ukuleleplayer/pureples",
+    author="Sondre Haugen Elgaaen",
+    author_email="sondrehelgaaen@gmail.com",
+    maintainer="Sondre Haugen Elgaaen",
+    maintainer_email="sondrehelgaaen@gmail.com",
+    url="https://github.com/SondreElg/thesis",
     license="MIT",
-    description="HyperNEAT and ES-HyperNEAT implemented in pure Python",
-    long_description="Python implementation of HyperNEAT and ES-HyperNEAT "
-    + "developed by Adrian Westh and Simon Krabbe Munck for evolving arbitrary neural networks. "
+    description="Thesis project NTNU/UTokyo 2023",
+    long_description="Thesis project for the Norwegian University of Science and Technology, written at the University of Tokyo in 2023"
+    + "developed by Sondre Haugen Elgaaen."
+    + "Based on Pureples library developed by Adrian Westh and Simon Krabbe Munck for evolving arbitrary neural networks. "
     + "HyperNEAT and ES-HyperNEAT is originally developed by Kenneth O. Stanley and Sebastian Risi",
     packages=[
         "pureples",
