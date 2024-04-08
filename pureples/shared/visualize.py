@@ -7,11 +7,47 @@ import pickle
 import warnings
 import math
 import graphviz
+import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import seaborn as sns
 import pandas as pd
+
+standard_colors = [
+    "blue",
+    "green",
+    "red",
+    "purple",
+    "orange",
+    "yellow",
+    "pink",
+    "brown",
+    "gray",
+    "olive",
+    "cyan",
+    "lime",
+    "teal",
+    "lavender",
+    "magenta",
+    "salmon",
+    "gold",
+    "lightblue",
+    "lightgreen",
+    "lightcoral",
+    "lightpink",
+    "lightgray",
+    "lightyellow",
+    "lightbrown",
+    "lightolive",
+    "lightcyan",
+    "lightlime",
+    "lightteal",
+    "lightlavender",
+    "lightmagenta",
+    "lightsalmon",
+    "lightgold",
+]
 
 
 def draw_net(
@@ -149,11 +185,54 @@ def draw_net(
     return dot
 
 
+def make_genome_matrix(
+    config,
+    genome,
+    filename=None,
+    prune_unused=False,
+    node_names={
+        -1: "ready",
+        -2: "go",
+        -3: "bias",
+        0: "output",
+        # 1: "output2",
+    },
+):
+    # If requested, use a copy of the genome which omits all components that won't affect the output.
+    if prune_unused:
+        genome = genome.get_pruned_copy(config.genome_config)
+
+    # nodes = set(*genome.nodes.keys(), *config.genome_config.output_keys)
+
+    connections = [(cg.key, cg.weight) for cg in genome.connections.values()]
+
+    # Extracting unique nodes and sorting them
+    nodes = set()
+    for (a, b), _ in connections:
+        nodes.update([a, b])
+    nodes = sorted(nodes)
+    bias_row = pd.DataFrame(
+        [genome.nodes[k].bias if k in genome.nodes else 0.0 for k in nodes],
+        index=nodes,
+        columns=["-3"],
+    ).T
+    # Creating an empty DataFrame with sorted nodes as index and columns
+    matrix = pd.DataFrame(index=nodes, columns=nodes).fillna(0.0)
+
+    matrix = pd.concat([bias_row, matrix])
+    # Populating the DataFrame with weights as floats
+    for (a, b), weight in connections:
+        matrix.at[a, b] = weight
+
+    # Save the DataFrame
+    matrix.to_csv(f"{filename}.csv")
+
+
 def onclick(event):
     """
     Click handler for weight gradient created by a CPPN. Will re-query with the clicked coordinate.
     """
-    plt.close()
+    plt.close("all")
     x = event.xdata
     y = event.ydata
 
@@ -243,7 +322,7 @@ def draw_es(id_to_coords, connections, filename):
     plt.grid()
     plt.tight_layout()
     fig.savefig(filename, dpi=300)
-    plt.close()
+    plt.close("all")
 
 
 # Function to divide the groups into chunks of size n and calculate the mean
@@ -376,7 +455,7 @@ def draw_hebbian(
 
     plt.tight_layout()
     fig.savefig(filename, dpi=300, bbox_inches="tight")
-    plt.close()
+    plt.close("all")
 
 
 def plot_hebbian_correlation_heatmap(csv_file_path, mapping_list, filename):
@@ -445,7 +524,1070 @@ def draw_omission_trials(omission_outputs, filename):
         bbox_extra_artists=(lgd,),
         bbox_inches="tight",
     )
-    plt.close()
+    plt.close("all")
+
+
+def pad_output_delays(
+    cycle_len,
+    cycle_delay_max,
+    all_outputs,
+    trials,
+):
+    max_foreperiod = cycle_len - cycle_delay_max
+    dim = np.arange(-cycle_len, cycle_len, 1)
+
+    indices = np.empty((len(all_outputs)), dtype=object)
+    nodes = all_outputs[0][0].keys()
+    padded_output = np.empty_like(all_outputs)
+    delay_split = np.empty_like(all_outputs)
+    for idx, node in enumerate(nodes):
+        for block in range(len(all_outputs)):
+            delay_split[block][node] = np.empty((cycle_delay_max), dtype=object)
+            node_outputs = np.array(
+                [entry[node] for entry in all_outputs[block]], dtype=float
+            )
+            if node == -1:
+                indices[block] = np.append(
+                    np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
+                )
+
+            block_indices = indices[block]
+            entries = np.array([])
+            delay_split_buffer = np.empty((cycle_delay_max), dtype=object)
+            for i in range(len(block_indices) - 1):
+                # print(f"{block_indices[i]}:{block_indices[i+1]}")
+                first_half = np.pad(
+                    node_outputs[block_indices[i] : block_indices[i + 1]],
+                    (
+                        0,
+                        cycle_len
+                        - len(node_outputs[block_indices[i] : block_indices[i + 1]]),
+                    ),
+                    constant_values=(np.nan,),
+                )
+                delay = block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
+                entries.extend(first_half)
+                delay_split_buffer[delay].extend(first_half)
+            delay_split[block][node][delay] = entries
+            padded_output[block][node] = first_half
+    return padded_output, delay_split
+
+
+def draw_average_node_output(
+    cycle_len,
+    cycle_delay_max,
+    network_input,
+    all_outputs,
+    filename,
+    trials,
+    *,
+    only_last=False,
+    only_last_of_previous=False,
+    custom_range=None,
+    last_max_delay=False,
+    end_tests=0,
+    log_level=0,
+    node_names={
+        -1: "ready",
+        -2: "go",
+        0: "output",
+        # 1: "output2",
+    },
+):
+    max_foreperiod = cycle_len - cycle_delay_max
+    only_last = only_last or last_max_delay
+    indices = np.empty((len(all_outputs)), dtype=object)
+    dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
+
+    delay_split = np.empty(
+        (cycle_delay_max, len(all_outputs), trials, len(dim)), dtype=float
+    )
+    delay_split.fill(np.nan)
+
+    nodes = all_outputs[0][0].keys()
+
+    # Calculate the number of rows needed for a 3-column layout
+    num_nodes = len(nodes)
+    num_rows = (
+        num_nodes + 2 + 3
+    ) // 3  # Add 2 to ensure that we have enough rows for all nodes
+
+    # Create subplots in a 3xN grid
+    fig, axes = plt.subplots(
+        num_rows, 3, figsize=(15, num_rows * 5 + 1), sharey=True
+    )  # Adjust the figsize as necessary
+
+    # Flatten the axes array for easy iteration
+    axes = axes.flatten()
+    delay = 0
+    #  Plot each node in its respective subplot
+    for idx, node in enumerate(nodes):
+        axes[idx].set_title(node_names[node] if node in node_names else f"Node {node}")
+        axes[idx].set_xlabel("Timestep")
+        axes[idx].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+        if idx % 3 == 0:
+            axes[idx].set_ylabel("Magnitude")
+        for x in [
+            0 if only_last_of_previous else -cycle_delay_max,
+            0,
+            max_foreperiod,
+        ]:
+            axes[idx].axvline(
+                x=x,
+                ymin=0.0,
+                ymax=1,
+                c="gray",
+                linewidth=1,
+                linestyle="-" if x == 0 else "--",
+                zorder=-1,
+                clip_on=False,
+            )
+        for block in range(len(all_outputs)):
+            node_outputs = np.array(
+                [entry[node] for entry in all_outputs[block]], dtype=float
+            )
+            if node == -1:
+                indices[block] = np.append(
+                    np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
+                )
+                if end_tests:
+                    indices[block] = indices[block][0:-(end_tests)]
+                if only_last:
+                    if last_max_delay:
+                        for index in range(-1, -len(indices) + 2, -1):
+                            if (
+                                indices[block][index - 2] - indices[block][index]
+                                == cycle_len * 2 + 1
+                            ):
+                                indices[block] = indices[block][index - 2 : index]
+                                break
+                    if indices[block][-1] - indices[block][0] > cycle_len * 2:
+                        indices[block] = indices[block][-3:]
+                if custom_range:
+                    indices[block] = indices[block][custom_range[0] : custom_range[1]]
+
+            block_indices = indices[block]
+            entries = []
+            if only_last_of_previous:
+                entries.append(
+                    np.concatenate(
+                        (
+                            [0],
+                            np.pad(
+                                node_outputs[block_indices[0] : block_indices[1]],
+                                (
+                                    0,
+                                    cycle_len
+                                    - len(
+                                        node_outputs[
+                                            block_indices[0] : block_indices[1]
+                                        ]
+                                    ),
+                                ),
+                                constant_values=(np.nan,),
+                            ),
+                        )
+                    )
+                )
+            for i in range(len(block_indices) - 2):
+                # print(f"{block_indices[i]}:{block_indices[i+1]}")
+
+                if only_last_of_previous:
+                    first_half = node_outputs[block_indices[i]]
+                else:
+                    first_half = np.pad(
+                        node_outputs[block_indices[i] : block_indices[i + 1]],
+                        (
+                            0,
+                            cycle_len
+                            - len(
+                                node_outputs[block_indices[i] : block_indices[i + 1]]
+                            ),
+                        ),
+                        constant_values=(np.nan,),
+                    )
+                second_half = np.pad(
+                    node_outputs[block_indices[i + 1] : block_indices[i + 2]],
+                    (
+                        0,
+                        cycle_len
+                        - len(
+                            node_outputs[block_indices[i + 1] : block_indices[i + 2]]
+                        ),
+                    ),
+                    constant_values=(np.nan,),
+                )
+                # print(delay_split)
+                delay_first = (
+                    block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
+                )
+                delay_split[delay_first][block][i] = np.append(first_half, second_half)
+                entries.append(np.append(first_half, second_half))
+            entries = np.array(entries)
+            latest_plot = axes[idx].plot(
+                dim,
+                entries[0] if only_last else np.nanmean(entries, axis=0),
+                label=block + 1,
+            )
+            if not only_last:
+                # print(
+                #     node_names[node] if node in node_names else f"Node {node}",
+                #     "block ",
+                #     block,
+                # )
+                delay = 0
+                for delayed_block in delay_split:
+                    averages = np.nanmean(delayed_block[block], axis=0)
+                    averages[cycle_len - 1] = averages[max_foreperiod + delay]
+                    averages[cycle_len * 2 - 1] = averages[
+                        cycle_len + max_foreperiod + delay
+                    ]
+                    mask = np.concatenate(
+                        (
+                            np.full(max_foreperiod, False),
+                            np.isfinite(averages[max_foreperiod:cycle_len]),
+                            np.full(max_foreperiod, True),
+                            np.isfinite(averages[max_foreperiod + cycle_len :]),
+                        ),
+                        axis=None,
+                    )
+                    # print(mask, "len", len(mask))
+                    # print(dim[mask])
+                    # print(latest_plot)
+                    # print("delay: ", delay, averages)
+                    # print(averages)
+                    # print("delay index", -(cycle_delay_max - delay))
+                    # print(cycle_len - (cycle_delay_max - delay))
+                    axes[idx].plot(
+                        dim[mask],
+                        averages[mask],
+                        marker=f"{(delay % 4) + 1}",
+                        markersize=5.0,
+                        linewidth=0.3,
+                        # linestyle="",
+                        color=latest_plot[0].get_color(),
+                        alpha=0.7,
+                    )
+                    # if delay < len(delay_split) - 1:
+                    #     axes[idx].hlines(
+                    #         xmin=-(cycle_delay_max - delay),
+                    #         xmax=-1,
+                    #         y=averages[cycle_len - (cycle_delay_max - delay)],
+                    #         color=latest_plot[0].get_color(),
+                    #         linewidth=0.5,
+                    #         linestyle="--",
+                    #         zorder=-1,
+                    #         clip_on=False,
+                    #     )
+                    #     axes[idx].hlines(
+                    #         xmin=cycle_len - delay - 1,
+                    #         xmax=cycle_len - 1,
+                    #         y=averages[len(dim) - delay - 1],
+                    #         color=latest_plot[0].get_color(),
+                    #         linewidth=0.5,
+                    #         linestyle="--",
+                    #         zorder=-1,
+                    #         clip_on=False,
+                    #     )
+                    delay += 1
+        axes[idx].legend(loc="upper right")
+
+    markers = []
+    for delay in range(delay):
+        markers.append(
+            matplotlib.lines.Line2D(
+                [],
+                [],
+                color="blue",
+                marker=f"{(delay % 4) + 1}",
+                markersize=15,
+                linestyle="",
+                label=f"delay {delay}",
+                alpha=0.5,
+            )
+        )
+
+    axes[idx + 1].legend(
+        handles=markers,
+        # bbox_to_anchor=(0.0, 1.0, 1.0, 0.10),
+        loc=3,
+        ncol=2,
+        mode="expand",
+        borderaxespad=0.0,
+    )
+
+    # If there are any empty subplots, turn them off
+    for ax in axes[num_nodes:]:
+        ax.axis("off")
+
+    # plt.tight_layout()
+    fig.savefig(filename, dpi=300, bbox_inches="tight")
+    plt.close("all")
+
+
+def draw_individual_node_output(
+    cycle_len,
+    cycle_delay_max,
+    network_input,
+    all_outputs,
+    filename,
+    trials,
+    *,
+    include_previous=False,
+    only_last=False,
+    only_last_of_previous=False,
+    custom_range=None,
+    last_max_delay=False,
+    end_tests=0,
+    log_level=0,
+    node_names={
+        -1: "ready",
+        -2: "go",
+        0: "output",
+        # 1: "output2",
+    },
+    average=False,
+    delay_buckets=False,
+    colors=standard_colors,
+):
+    max_foreperiod = cycle_len - cycle_delay_max
+    only_last = only_last or last_max_delay
+    indices = np.empty((len(all_outputs)), dtype=object)
+    dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
+    # dim = np.append(np.arange(1, cycle_len), np.arange(cycle_len))
+
+    previous_fp = None
+
+    delay_split = np.empty(
+        (len(all_outputs), cycle_delay_max, trials, len(dim)), dtype=float
+    )
+    delay_split.fill(np.nan)
+
+    nodes = all_outputs[0][0].keys()
+
+    # Calculate the number of rows needed for a 3-column layout
+    num_nodes = len(nodes)
+    num_rows = (
+        num_nodes + 2
+    ) // 3  # Add 2 to ensure that we have enough rows for all nodes
+
+    #  Plot each node in its respective subplot
+    previous_output = [
+        None for _ in nodes
+    ]  # NEED TO HAVE AN ENTRY FOR EACH NODE IN THIS ARRAY
+    for block in range(len(all_outputs)):
+        # Create subplots in a 3xN grid
+        fig, axes = plt.subplots(
+            num_rows, 3, figsize=(15, num_rows * 5 + 1), sharey=True
+        )  # Adjust the figsize as necessary
+
+        # Flatten the axes array for easy iteration
+        axes = axes.flatten()
+        for idx, node in enumerate(nodes):
+            # plt.xlim((dim[0], dim[-1]))
+            axes[idx].set_title(
+                node_names[node] if node in node_names else f"Node {node}"
+            )
+            axes[idx].set_xlabel("Timestep")
+            axes[idx].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+            if idx % 3 == 0:
+                axes[idx].set_ylabel("Magnitude")
+            for x in [
+                0 if only_last_of_previous else -cycle_delay_max,
+                0,
+                max_foreperiod,
+            ]:
+                axes[idx].axvline(
+                    x=x,
+                    ymin=0.0,
+                    ymax=1,
+                    c="gray",
+                    linewidth=1,
+                    linestyle="-" if x == 0 else "--",
+                    zorder=-1,
+                    clip_on=False,
+                )
+            node_outputs = np.array(
+                [entry[node] for entry in all_outputs[block]], dtype=float
+            )
+            if node == -2:
+                this_fp = np.where(node_outputs == 1)[0][0]
+            if node == -1:
+                indices[block] = np.append(
+                    np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
+                )
+                if end_tests:
+                    indices[block] = indices[block][0:-(end_tests)]
+                if only_last:
+                    if last_max_delay:
+                        for index in range(-1, -len(indices) + 2, -1):
+                            if (
+                                indices[block][index - 2] - indices[block][index]
+                                == cycle_len * 2 + 1
+                            ):
+                                indices[block] = indices[block][index - 2 : index]
+                                break
+                    if indices[block][-1] - indices[block][0] > cycle_len * 2:
+                        indices[block] = indices[block][-3:]
+                if custom_range:
+                    indices[block] = indices[block][custom_range[0] : custom_range[1]]
+
+            block_indices = indices[block]
+            entries = previous_output[idx] if previous_output[idx] != None else []
+            if only_last_of_previous:
+                entries.append(
+                    np.concatenate(
+                        (
+                            [0],
+                            np.pad(
+                                node_outputs[block_indices[0] : block_indices[1]],
+                                (
+                                    0,
+                                    cycle_len
+                                    - len(
+                                        node_outputs[
+                                            block_indices[0] : block_indices[1]
+                                        ]
+                                    ),
+                                ),
+                                constant_values=(np.nan,),
+                            ),
+                        )
+                    )
+                )
+            # print(f"{previous_output=}")
+            # print(f"{entries=}")
+            for i in range(len(block_indices) - 2):
+                # print(f"{block_indices[i]}:{block_indices[i+1]}")
+
+                if only_last_of_previous:
+                    first_half = node_outputs[block_indices[i]]
+                else:
+                    first_half = np.pad(
+                        node_outputs[block_indices[i] : block_indices[i + 1]],
+                        (
+                            0,
+                            cycle_len
+                            - len(
+                                node_outputs[block_indices[i] : block_indices[i + 1]]
+                            ),
+                        ),
+                        constant_values=(np.nan,),
+                    )
+                second_half = np.pad(
+                    node_outputs[block_indices[i + 1] : block_indices[i + 2]],
+                    (
+                        0,
+                        cycle_len
+                        - len(
+                            node_outputs[block_indices[i + 1] : block_indices[i + 2]]
+                        ),
+                    ),
+                    constant_values=(np.nan,),
+                )
+                # print(delay_split)
+                delay_first = (
+                    block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
+                )
+                delay_split[block][delay_first][i] = np.append(first_half, second_half)
+                entries.append(np.append(first_half, second_half))
+            entries = np.array(entries)
+            if delay_buckets:
+                print(delay_split[block].shape)
+                delay_plots = []
+                markers = []
+                overall_std = np.nanstd(entries, axis=0)
+                axes[idx].plot(
+                    dim,
+                    np.where(overall_std <= 0.02, overall_std, np.nan),
+                    marker=f"o",
+                    markersize=10,
+                    linestyle="",
+                    c="black",
+                )
+                for delay_index, delay_block in enumerate(delay_split[block]):
+                    axes[idx].plot(
+                        dim,
+                        delay_block.T,
+                        c=colors[delay_index],
+                        linestyle="--",
+                    )
+                    delay_plots.append(
+                        axes[idx].plot(
+                            dim,
+                            np.nanmean(delay_block, axis=0),
+                            c=colors[delay_index],
+                        )
+                    )
+                    # for entry in delay_block:
+                    print(delay_block[0])
+                    delay_std = np.nanstd(delay_block, axis=0)
+                    print(delay_std)
+                    markers.append(
+                        axes[idx].plot(
+                            dim,
+                            np.where(delay_std <= 0.02, delay_std, np.nan),
+                            marker=f"{(delay_index % 4) + 1}",
+                            markersize=15,
+                            linestyle="",
+                            c=colors[delay_index],
+                        )
+                    )
+                axes[idx].legend(
+                    handles=[delay_plot[0] for delay_plot in markers],
+                    labels=[i for i in range(len(delay_plots))],
+                    loc="upper right",
+                )
+            else:
+                for entry_index, entry in enumerate(entries):
+                    axes[idx].plot(
+                        dim,
+                        entry,
+                        label=(
+                            entry_index
+                            if previous_output[idx] == None or entry_index != 0
+                            else f"fp{previous_fp}"
+                        ),
+                    )
+                axes[idx].legend(loc="upper right")
+            # If there are any empty subplots, turn them off
+            for ax in axes[num_nodes:]:
+                ax.axis("off")
+
+            # print(f"{include_previous=}")
+            if include_previous:
+                previous_output[idx] = [np.append(first_half, second_half)]
+                # print(f"{previous_output=}")
+
+        # plt.tight_layout()
+        fig.savefig(f"{filename}-fp{block+1}", dpi=300, bbox_inches="tight")
+        previous_fp = this_fp
+
+    plt.close("all")
+
+
+def draw_foreperiod_adaptation(
+    cycle_len,
+    cycle_delay_max,
+    network_input,
+    all_outputs,
+    filename,
+    trials,
+    *,
+    include_previous=False,
+    only_last=False,
+    only_last_of_previous=False,
+    custom_range=None,
+    last_max_delay=False,
+    end_tests=0,
+    node_names={
+        -1: "ready",
+        -2: "go",
+        0: "output",
+        # 1: "output2",
+    },
+    average=False,
+    delay_buckets=False,
+    colors=standard_colors,
+):
+    max_foreperiod = cycle_len - cycle_delay_max
+    only_last = only_last or last_max_delay
+    indices = np.empty((len(all_outputs)), dtype=object)
+    dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
+    # dim = np.append(np.arange(1, cycle_len), np.arange(cycle_len))
+
+    previous_fp = None
+
+    nodes = all_outputs[0][0].keys()
+
+    # Calculate the number of rows needed for a 3-column layout
+    num_nodes = len(nodes)
+
+    delay_split = np.empty(
+        (cycle_delay_max, len(nodes), len(all_outputs), trials, len(dim)), dtype=float
+    )
+    delay_split.fill(np.nan)
+
+    num_rows = (
+        num_nodes + 2 + 3
+    ) // 3  # Add 2 to ensure that we have enough rows for all nodes
+
+    #  Plot each node in its respective subplot
+    previous_output = [
+        None for _ in nodes
+    ]  # NEED TO HAVE AN ENTRY FOR EACH NODE IN THIS ARRAY
+    for block in range(len(all_outputs)):
+        # Create subplots in a 3xN grid
+        fig, axes = plt.subplots(
+            num_rows, 3, figsize=(15, num_rows * 5 + 1), sharey=True
+        )  # Adjust the figsize as necessary
+
+        # Flatten the axes array for easy iteration
+        axes = axes.flatten()
+        for idx, node in enumerate(nodes):
+            # plt.xlim((dim[0], dim[-1]))
+            axes[idx].set_title(
+                node_names[node] if node in node_names else f"Node {node}"
+            )
+            axes[idx].set_xlabel("Timestep")
+            axes[idx].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+            if idx % 3 == 0:
+                axes[idx].set_ylabel("Magnitude")
+            for x in [
+                0 if only_last_of_previous else -cycle_delay_max,
+                0,
+                max_foreperiod,
+            ]:
+                axes[idx].axvline(
+                    x=x,
+                    ymin=0.0,
+                    ymax=1,
+                    c="gray",
+                    linewidth=1,
+                    linestyle="-" if x == 0 else "--",
+                    zorder=-1,
+                    clip_on=False,
+                )
+            node_outputs = np.array(
+                [entry[node] for entry in all_outputs[block]], dtype=float
+            )
+            if node == -2:
+                this_fp = np.where(node_outputs == 1)[0][0]
+            if node == -1:
+                indices[block] = np.append(
+                    np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
+                )
+                if end_tests:
+                    indices[block] = indices[block][0:-(end_tests)]
+                if only_last:
+                    if last_max_delay:
+                        for index in range(-1, -len(indices) + 2, -1):
+                            if (
+                                indices[block][index - 2] - indices[block][index]
+                                == cycle_len * 2 + 1
+                            ):
+                                indices[block] = indices[block][index - 2 : index]
+                                break
+                    if indices[block][-1] - indices[block][0] > cycle_len * 2:
+                        indices[block] = indices[block][-3:]
+                if custom_range:
+                    indices[block] = indices[block][custom_range[0] : custom_range[1]]
+
+            block_indices = indices[block]
+            entries = previous_output[idx] if previous_output[idx] != None else []
+            if only_last_of_previous:
+                entries.append(
+                    np.concatenate(
+                        (
+                            [0],
+                            np.pad(
+                                node_outputs[block_indices[0] : block_indices[1]],
+                                (
+                                    0,
+                                    cycle_len
+                                    - len(
+                                        node_outputs[
+                                            block_indices[0] : block_indices[1]
+                                        ]
+                                    ),
+                                ),
+                                constant_values=(np.nan,),
+                            ),
+                        )
+                    )
+                )
+            # print(f"{previous_output=}")
+            # print(f"{entries=}")
+            for i in range(len(block_indices) - 2):
+                # print(f"{block_indices[i]}:{block_indices[i+1]}")
+
+                if only_last_of_previous:
+                    first_half = node_outputs[block_indices[i]]
+                else:
+                    first_half = np.pad(
+                        node_outputs[block_indices[i] : block_indices[i + 1]],
+                        (
+                            0,
+                            cycle_len
+                            - len(
+                                node_outputs[block_indices[i] : block_indices[i + 1]]
+                            ),
+                        ),
+                        constant_values=(np.nan,),
+                    )
+                second_half = np.pad(
+                    node_outputs[block_indices[i + 1] : block_indices[i + 2]],
+                    (
+                        0,
+                        cycle_len
+                        - len(
+                            node_outputs[block_indices[i + 1] : block_indices[i + 2]]
+                        ),
+                    ),
+                    constant_values=(np.nan,),
+                )
+                # print(delay_split)
+                delay_first = (
+                    block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
+                )
+                delay_split[block][delay_first][i] = np.append(first_half, second_half)
+                entries.append(np.append(first_half, second_half))
+            entries = np.array(entries)
+            if delay_buckets:
+                print(delay_split[block].shape)
+                delay_plots = []
+                markers = []
+                overall_std = np.nanstd(entries, axis=0)
+                axes[idx].plot(
+                    dim,
+                    np.where(overall_std <= 0.02, overall_std, np.nan),
+                    marker=f"o",
+                    markersize=10,
+                    linestyle="",
+                    c="black",
+                )
+                for delay_index, delay_block in enumerate(delay_split[block]):
+                    # delay_plots.append(
+                    #     axes[idx].plot(dim, delay_block.T, c=colors[delay_index]),
+                    #     linestyle="--",
+                    # )
+                    axes[idx].plot(
+                        dim,
+                        np.average(delay_block, axis=0),
+                        c=colors[delay_index],
+                        linestyle="--",
+                    )
+                    # for entry in delay_block:
+                    print(delay_block[0])
+                    delay_std = np.nanstd(delay_block, axis=0)
+                    print(delay_std)
+                    markers.append(
+                        axes[idx].plot(
+                            dim,
+                            np.where(delay_std <= 0.02, delay_std, np.nan),
+                            marker=f"{(delay_index % 4) + 1}",
+                            markersize=15,
+                            linestyle="",
+                            c=colors[delay_index],
+                        )
+                    )
+                axes[idx].legend(
+                    handles=[delay_plot[0] for delay_plot in markers],
+                    labels=[i for i in range(len(delay_plots))],
+                    loc="upper right",
+                )
+            else:
+                for entry_index, entry in enumerate(entries):
+                    axes[idx].plot(
+                        dim,
+                        entry,
+                        label=(
+                            entry_index
+                            if previous_output[idx] == None or entry_index != 0
+                            else f"fp{previous_fp}"
+                        ),
+                    )
+                axes[idx].legend(loc="upper right")
+            # If there are any empty subplots, turn them off
+            for ax in axes[num_nodes:]:
+                ax.axis("off")
+
+            # print(f"{include_previous=}")
+            if include_previous:
+                previous_output[idx] = [np.append(first_half, second_half)]
+                # print(f"{previous_output=}")
+
+        # plt.tight_layout()
+        fig.savefig(f"{filename}-fp{block+1}", dpi=300, bbox_inches="tight")
+        previous_fp = this_fp
+
+    plt.close("all")
+
+
+def draw_average_node_output_around_go(
+    cycle_len,
+    cycle_delay_max,
+    network_input,
+    all_outputs,
+    filename,
+    trials,
+    only_last=False,
+    last_max_delay=False,
+    end_tests=0,
+    log_level=0,
+    node_names={
+        -1: "ready",
+        -2: "go",
+        0: "output",
+        # 1: "output2",
+    },
+):
+    max_foreperiod = cycle_len - cycle_delay_max
+    only_last = only_last or last_max_delay
+    # ready_indices = np.empty((len(all_outputs)), dtype=object)
+    indices = np.empty((len(all_outputs)), dtype=object)
+    dim = np.arange(-cycle_len, cycle_len, 1)
+
+    delay_split = np.empty(
+        (cycle_delay_max, len(all_outputs), trials, len(dim)), dtype=float
+    )
+    delay_split.fill(np.nan)
+
+    nodes = all_outputs[0][0].keys()
+
+    # Calculate the number of rows needed for a 3-column layout
+    num_nodes = len(nodes)
+    num_rows = (
+        num_nodes + 2 + 3
+    ) // 3  # Add 2 to ensure that we have enough rows for all nodes
+
+    # Create subplots in a 3xN grid
+    fig, axes = plt.subplots(
+        num_rows, 3, figsize=(15, num_rows * 5 + 1), sharey=True
+    )  # Adjust the figsize as necessary
+
+    # Flatten the axes array for easy iteration
+    axes = axes.flatten()
+    delay = 0
+    #  Plot each node in its respective subplot
+    for idx, node in enumerate(nodes):
+        axes[idx].set_title(node_names[node] if node in node_names else f"Node {node}")
+        axes[idx].set_xlabel("Timestep")
+        axes[idx].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+        if idx % 3 == 0:
+            axes[idx].set_ylabel("Magnitude")
+        for x in [
+            0,
+        ]:
+            axes[idx].axvline(
+                x=x,
+                ymin=0.0,
+                ymax=1,
+                c="gray",
+                linewidth=1,
+                linestyle="-" if x == 0 else "--",
+                zorder=-1,
+                clip_on=False,
+            )
+        for block in range(len(all_outputs)):
+            node_outputs = np.array(
+                [entry[node] for entry in all_outputs[block]], dtype=float
+            )
+            if node == -1:
+                # print([entry[-2] for entry in all_outputs[block]])
+                indices[block] = np.asarray(
+                    np.where(
+                        np.array(
+                            [entry[-2] for entry in all_outputs[block]], dtype=float
+                        )
+                        == 1
+                    )
+                )[
+                    0
+                ]  # Split on go?
+                # print(indices[block])
+                # ready_indices[block] = np.append(
+                #     np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
+                # )
+                if end_tests:
+                    indices[block] = indices[block][0:-(end_tests)]
+                    # ready_indices[block] = ready_indices[block][0:-(end_tests)]
+                if only_last:
+                    if last_max_delay:
+                        for index in range(-1, -len(indices) + 2, -1):
+                            if (
+                                indices[block][index - 2] - indices[block][index]
+                                == cycle_len * 2 + 1
+                            ):
+                                indices[block] = indices[block][index - 2 : index]
+                                break
+                        # for index in range(-1, -len(ready_indices) + 2, -1):
+                        #     if (
+                        #         ready_indices[block][index - 2]
+                        #         - ready_indices[block][index]
+                        #         == cycle_len * 2 + 1
+                        #     ):
+                        #         ready_indices[block] = ready_indices[block][
+                        #             index - 2 : index
+                        #         ]
+                        #         break
+                    if indices[block][-1] - indices[block][0] > cycle_len * 2:
+                        indices[block] = indices[block][-3:]
+                        # ready_indices[block] = ready_indices[block][-3:]
+            block_indices = indices[block]
+            # ready_block_indices = ready_indices[block]
+            entries = []
+            for i in range(len(block_indices) - 2):
+                # print(f"{block_indices[i]}:{block_indices[i+1]}")
+                # print(block_indices)
+                delay_first = (
+                    block_indices[i + 1]
+                    - block_indices[i]
+                    - (max_foreperiod + 1)
+                    # + (len(indices) - block)
+                )
+                delay_second = (
+                    block_indices[i + 2]
+                    - block_indices[i + 1]
+                    - (max_foreperiod + 1)
+                    # + (len(indices) - block)
+                )
+                block_offset = max_foreperiod - block
+                first_half = np.append(
+                    np.pad(
+                        node_outputs[
+                            block_indices[i] : block_indices[i] + block_offset
+                        ],
+                        (
+                            0,
+                            cycle_len
+                            - len(
+                                node_outputs[block_indices[i] : block_indices[i + 1]]
+                            ),
+                        ),
+                        constant_values=(np.nan,),
+                    ),
+                    node_outputs[
+                        block_indices[i] + block_offset : block_indices[i + 1]
+                    ],
+                )
+                second_half = np.append(
+                    np.pad(
+                        node_outputs[
+                            block_indices[i + 1] : block_indices[i + 1] + block_offset
+                        ],
+                        (
+                            0,
+                            cycle_len
+                            - len(
+                                node_outputs[
+                                    block_indices[i + 1] : block_indices[i + 2]
+                                ]
+                            ),
+                        ),
+                        constant_values=(np.nan,),
+                    ),
+                    node_outputs[
+                        block_indices[i + 1] + block_offset : block_indices[i + 2]
+                    ],
+                )
+                delay_split[delay_first][block][i] = np.pad(
+                    np.append(first_half, second_half[0]),
+                    (
+                        0,
+                        len(dim) - cycle_len - 1,
+                    ),
+                    constant_values=(np.nan,),
+                )
+                delay_split[delay_second][block][i] = np.pad(
+                    second_half,
+                    (len(dim) - cycle_len, 0),
+                    constant_values=(np.nan,),
+                )
+                entries.append(np.append(first_half, second_half))
+            entries = np.array(entries)
+            # print(indices)
+            # print(entries)
+            latest_plot = axes[idx].plot(
+                dim,
+                entries[0] if only_last else np.nanmean(entries, axis=0),
+                label=block + 1,
+            )
+            if not only_last:
+                # print(
+                #     node_names[node] if node in node_names else f"Node {node}",
+                #     "block ",
+                #     block,
+                # )
+                delay = 0
+                for delayed_block in delay_split:
+                    # print(delayed_block)
+                    averages = np.nanmean(delayed_block[block], axis=0)
+                    # averages[cycle_len - 1] = averages[max_foreperiod + delay]
+                    # averages[cycle_len * 2 - 1] = averages[
+                    #     cycle_len + max_foreperiod + delay
+                    # ]
+                    # mask = np.concatenate(
+                    #     (
+                    #         np.full(max_foreperiod, False),
+                    #         np.isfinite(averages[max_foreperiod:cycle_len]),
+                    #         np.full(max_foreperiod, True),
+                    #         np.isfinite(averages[max_foreperiod + cycle_len :]),
+                    #     ),
+                    #     axis=None,
+                    # )
+                    # print(mask, "len", len(mask))
+                    # print(dim[mask])
+                    # print(latest_plot)
+                    # print("delay: ", delay, averages)
+                    # print(averages)
+                    # print("delay index", -(cycle_delay_max - delay))
+                    # print(cycle_len - (cycle_delay_max - delay))
+                    axes[idx].plot(
+                        dim,
+                        averages,
+                        marker=f"{(delay % 4) + 1}",
+                        markersize=5.0,
+                        linewidth=0.3,
+                        # linestyle="",
+                        color=latest_plot[0].get_color(),
+                        alpha=0.7,
+                    )
+                    # if delay < len(delay_split) - 1:
+                    #     axes[idx].hlines(
+                    #         xmin=-(cycle_delay_max - delay),
+                    #         xmax=-1,
+                    #         y=averages[cycle_len - (cycle_delay_max - delay)],
+                    #         color=latest_plot[0].get_color(),
+                    #         linewidth=0.5,
+                    #         linestyle="--",
+                    #         zorder=-1,
+                    #         clip_on=False,
+                    #     )
+                    #     axes[idx].hlines(
+                    #         xmin=cycle_len - delay - 1,
+                    #         xmax=cycle_len - 1,
+                    #         y=averages[len(dim) - delay - 1],
+                    #         color=latest_plot[0].get_color(),
+                    #         linewidth=0.5,
+                    #         linestyle="--",
+                    #         zorder=-1,
+                    #         clip_on=False,
+                    #     )
+                    delay += 1
+        axes[idx].legend(loc="upper right")
+
+    markers = []
+    for delay in range(delay):
+        markers.append(
+            matplotlib.lines.Line2D(
+                [],
+                [],
+                color="blue",
+                marker=f"{(delay % 4) + 1}",
+                markersize=15,
+                linestyle="",
+                label=f"delay {delay}",
+                alpha=0.5,
+            )
+        )
+
+    axes[idx + 1].legend(
+        handles=markers,
+        # bbox_to_anchor=(0.0, 1.0, 1.0, 0.10),
+        loc=3,
+        ncol=2,
+        mode="expand",
+        borderaxespad=0.0,
+    )
+
+    # If there are any empty subplots, turn them off
+    for ax in axes[num_nodes:]:
+        ax.axis("off")
+
+    # plt.tight_layout()
+    fig.savefig(filename, dpi=300, bbox_inches="tight")
+    plt.close("all")
 
 
 def draw_output(
@@ -458,6 +1600,7 @@ def draw_output(
     all_outputs=[],
     network=None,
     draw_std=False,
+    log_level=0,
 ):
     df = pd.DataFrame(
         {
@@ -506,7 +1649,7 @@ def draw_output(
     plt.ylabel("magnitude")
     plt.tight_layout()
     fig.savefig(filename, dpi=300, bbox_extra_artists=(lgd,), bbox_inches="tight")
-    plt.close()
+    plt.close("all")
     if end_tests:
         end_test_set = split_output[-end_tests:-1]
         fig2 = plt.figure()
@@ -524,7 +1667,7 @@ def draw_output(
             bbox_extra_artists=(lgd,),
             bbox_inches="tight",
         )
-        plt.close()
+        plt.close("all")
     if draw_std:
         draw_net(
             network["config"],
@@ -548,65 +1691,64 @@ def draw_output(
             draw_std=draw_std,
         )
     if len(all_outputs):
-        df = pd.json_normalize(all_outputs)
-        df.to_csv(filename.split(".")[0] + f"_all.csv")
-        test_names = [
-            "trial_last",
-            "go_omitted",
-            "normalizing_trial",
-            "trial_first",
-            "trial_second",
-            "trial_third",
-            "go_on_first",
-            "go_on_middle",
-            "go_on_end",
-        ]
-        indices_from_zero = np.append(0, indices)
-        for test in range(end_tests + 4):
-            indice_index = -(end_tests - test) - 1
-            start = indices_from_zero[indice_index]
-            end = indices_from_zero[indice_index + 1] if end_tests - test else None
-            df = pd.json_normalize(all_outputs[start:end])
-            # print("test ", test)
-            # print("end_tests ", end_tests)
-            # print("indices_from_zero ", indices_from_zero)
-            # print(indices_from_zero[indice_index])
-            # print("start ", start)
-            # print("end ", end)
-            # print(df)
-            named_df = df.rename(columns={"-2": "ready", "-1": "go", "0": "output"})
-            fig3 = plt.figure()
-            plt.plot(
-                df.iloc[:, 0],
-                linestyle="--",
-                color="y",
-            )
-            plt.plot(
-                df.iloc[:, 1],
-                linestyle="--",
-                color="green",
-            )
-            plt.plot(
-                df.iloc[:, 2],
-                linestyle="-.",
-                color="grey",
-            )
-            plt.plot(df.iloc[:, 3:])
-            lgd = plt.legend(
-                named_df.columns, bbox_to_anchor=(1.04, 1), borderaxespad=0
-            )
-            fig3.savefig(
-                filename.split(".")[0] + f"_all_{test_names[test]}.png",
-                dpi=300,
-                bbox_extra_artists=(lgd,),
-                bbox_inches="tight",
-            )
-            plt.close()
-            if network and test_names[test] in [
+        if log_level > 2:
+            df = pd.json_normalize(all_outputs)
+            df.to_csv(filename.split(".")[0] + f"_all.csv")
+            test_names = [
                 "trial_last",
-                # "trial_first",
                 "go_omitted",
-            ]:
+                "normalizing_trial",
+                "trial_first",
+                "trial_second",
+                "trial_third",
+                "go_on_first",
+                "go_on_middle",
+                "go_on_end",
+            ]
+            indices_from_zero = np.append(0, indices)
+            for test in range(end_tests + 4):
+                indice_index = -(end_tests - test) - 1
+                start = indices_from_zero[indice_index]
+                end = indices_from_zero[indice_index + 1] if end_tests - test else None
+                df = pd.json_normalize(all_outputs[start:end])
+                named_df = df.rename(columns={"-2": "ready", "-1": "go", "0": "output"})
+                fig3 = plt.figure()
+                plt.plot(
+                    df.iloc[:, 0],
+                    linestyle="--",
+                    color="y",
+                )
+                plt.plot(
+                    df.iloc[:, 1],
+                    linestyle="--",
+                    color="green",
+                )
+                plt.plot(
+                    df.iloc[:, 2],
+                    linestyle="-.",
+                    color="grey",
+                )
+                plt.plot(df.iloc[:, 3:])
+                lgd = plt.legend(
+                    named_df.columns, bbox_to_anchor=(1.04, 1), borderaxespad=0
+                )
+                fig3.savefig(
+                    filename.split(".")[0] + f"_all_{test_names[test]}.png",
+                    dpi=300,
+                    bbox_extra_artists=(lgd,),
+                    bbox_inches="tight",
+                )
+                plt.close("all")
+            if (
+                network
+                and log_level > 3
+                and test_names[test]
+                in [
+                    "trial_last",
+                    # "trial_first",
+                    "go_omitted",
+                ]
+            ):
                 save_dir = (
                     filename.split(".")[0]
                     + f"_all_{test_names[test]}_detailed_network/"
@@ -644,11 +1786,240 @@ def draw_output(
     return
 
 
-def draw_tests(
-    cycle_len,
-    network_input,
-    network_output,
-    expected_output,
-    filename,
+def extract_key_and_fitness_from_file(file_path):
+    """Extract the key and fitness value from a given file."""
+    key = None
+    fitness = None
+    with open(file_path, "r") as file:
+        for line in file:
+            if line.startswith("Key:"):
+                key = line.split(":")[1].strip()
+            elif line.startswith("Fitness:"):
+                fitness = float(line.split(":")[1].strip())
+            if key is not None and fitness is not None:
+                break
+    return key, fitness
+
+
+def scan_folders_and_extract_info(root_folder, target_file="genome.txt"):
+    """Scan through folders starting from 'root_folder' and extract key and fitness values from files."""
+    fitness_dict = {}
+    for root, dirs, files in os.walk(root_folder):
+        for file in files:
+            if file == target_file:
+                file_path = os.path.join(root, file)
+                key, fitness = extract_key_and_fitness_from_file(file_path)
+                if key is not None and fitness is not None:
+                    fitness_dict[key] = fitness
+    return fitness_dict
+
+
+def group_results_by_key_content(results, patterns):
+    """Group results based on the content of the keys."""
+    grouped_results = {pattern: {} for pattern in list(patterns.values())}
+    for key, value in results.items():
+        for pattern in list(patterns.keys()):
+            if pattern in key:
+                grouped_results[patterns[pattern]][key] = value
+                break  # Assuming each key only belongs to one pattern group
+    return grouped_results
+
+
+def calculate_statistics(results):
+    """Calculate average, max, and min fitness for each grouping."""
+    stats = {}
+    for key, fitness_values in results.items():
+        if fitness_values:
+            avg_fitness = sum(fitness_values.values()) / len(fitness_values)
+            max_fitness = max(fitness_values.values())
+            min_fitness = min(fitness_values.values())
+            stats[key] = (avg_fitness, max_fitness, min_fitness)
+    return stats
+
+
+def plot_all_statistics(grouped_results, filename, colors=standard_colors):
+    """Plot the statistics for all groupings in different subplots."""
+    num_folders = len(grouped_results)
+    fig = plt.figure()
+
+    # plt.setp(axes, ylim=(0.85, 1))
+
+    # if num_folders == 1:
+    #     axes = [axes]  # Ensure axes is iterable even for a single subplot
+
+    # labels = [
+    #     entry.split("hidden_nodes")[1].split("-")[0].replace("_", " ").strip()
+    #     for entry in list(list(grouped_results.values())[0].keys())
+    # ]
+
+    for i, (folder_name, results) in enumerate(grouped_results.items()):
+        stats = calculate_statistics(results)
+        labels = [
+            entry.split("hidden_nodes")[1].split("-")[0].replace("_", " ").strip()
+            for entry in list(stats.keys())
+        ]
+        labels[:] = ["normal" if x == "" else x for x in labels]
+        avg_values = [val[0] for val in stats.values()]
+        error_values = [
+            (val[0] - val[2], val[1] - val[0]) for val in stats.values()
+        ]  # (avg - min, max - avg)
+
+        x = np.arange(len(labels))  # the label locations
+
+        # Plotting the average values as dots
+        # plt.scatter(x, avg_values, c=colors[i])
+
+        # Adding error bars to represent the range between min and max
+        plt.errorbar(
+            x + 0.1 * i,
+            avg_values,
+            yerr=list(zip(*error_values)),
+            fmt="o",
+            color=colors[i],
+            ecolor="lightgray",
+            elinewidth=3,
+            capsize=0,
+            label=folder_name,
+        )
+
+    # ax.set_xlabel("Groups")
+    plt.ylabel("Fitness")
+    plt.title(f"Fitness Statistics")
+    plt.xticks(x + 0.05 * i, labels)
+    lgd = plt.legend(loc="lower right")
+
+    plt.tight_layout()
+    fig.savefig(filename, dpi=300, bbox_extra_artists=(lgd,), bbox_inches="tight")
+    plt.close("all")
+
+
+def calculate_and_plot_statistics(root_folder, patterns, filename="fitness_statistics"):
+    """Calculate and plot statistics for the given folders and patterns."""
+    # Scan folders and extract info
+    results = {}
+    for root, folders, files in os.walk(root_folder):
+        for folder in folders:
+            folder_name = os.path.basename(folder)
+            results[folder] = scan_folders_and_extract_info(os.path.join(root, folder))
+    grouped_results = group_results_by_key_content(results, patterns)
+
+    # Plot and calculate statistics
+    plot_all_statistics(grouped_results, filename)
+
+
+def plot_fitness_over_time(
+    folder_list, csv_filename, output_filename="fitness_over_time", columns=3
 ):
-    return
+    """Plot the best and average fitness over time for each population in the folder list."""
+    num_rows = len(folder_list) // columns
+    fig, axes = plt.subplots(
+        num_rows, columns, figsize=(20, num_rows * 5 + 1), sharey=True
+    )
+    plt.yscale("logit")
+
+    if len(folder_list) == 1:
+        axes = [axes]  # Ensure axes is iterable even for a single subplot
+
+    # Flatten the axes array for easy iteration
+    # axes = axes.flatten()
+
+    for index, folder in enumerate(folder_list):
+        csv_file_path = os.path.join(folder, csv_filename)
+        if os.path.exists(csv_file_path):
+            # Read the CSV file
+            df = pd.read_csv(
+                csv_file_path, header=None, names=["Best Fitness", "Average Fitness"]
+            )
+
+            y = index % columns
+            x = index // columns
+
+            best = df["Best Fitness"]
+            average = df["Average Fitness"]
+            # Plotting the best and average fitness
+            axes[x][y].plot(best, label="Best Fitness", color="blue")
+            axes[x][y].plot(average, label="Average Fitness", color="red")
+
+            axes[x][y].set_xlabel("Time Step")
+            axes[x][y].set_ylabel("Fitness")
+            axes[x][y].set_title(
+                os.path.basename(folder).split("no-reset")[1].split("-")[0]
+            )
+            axes[x][y].legend()
+
+    plt.tight_layout()
+    fig.savefig(output_filename, dpi=300)
+    plt.close("all")
+
+
+def plot_fitness_over_time_for_subfolders(
+    root_folder,
+    csv_filename="fitness_over_time.csv",
+    output_filename="fitness_over_time",
+):
+    """Plot the best and average fitness over time for each population in the given root folder."""
+    folder_list = [
+        os.path.join(root_folder, folder)
+        for folder in os.listdir(root_folder)
+        if os.path.isdir(os.path.join(root_folder, folder))
+    ]
+    plot_fitness_over_time(folder_list, csv_filename, output_filename)
+
+
+def network_output_matrix(
+    *,
+    network_input,
+    all_outputs,
+    filename,
+    foreperiods,
+    cycle_len,
+    cycle_delay_max,
+    # network,
+    include_previous=False,
+    only_last=False,
+    custom_range=None,
+    last_max_delay=False,
+    end_tests=0,
+    log_level=0,
+    node_names={
+        -1: "ready",
+        -2: "go",
+        0: "output",
+        # 1: "output2",
+    },
+):
+    max_foreperiod = cycle_len - cycle_delay_max
+    network = f'network{filename.split("network")[1].strip("/")}'
+    df = pd.DataFrame(
+        columns=[
+            "network",
+            "fp",
+            "prev_delay",
+            "trial",
+            "fp_order",
+            *all_outputs[0][0].keys(),
+        ]
+    )
+    # indices = np.empty((len(all_outputs)), dtype=object)
+    for idx, block in enumerate(all_outputs):
+        fp = foreperiods[idx]
+        prev_delay = 0
+        trial = 0
+        node_outputs = np.array([entry[-1] for entry in block], dtype=float)
+        block_indices = np.append(
+            np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
+        )
+        for entry in block:
+            df.loc[len(df.index)] = [
+                network,
+                fp,
+                prev_delay,
+                trial,
+                foreperiods,
+                *entry.values(),
+            ]
+            prev_delay = (
+                block_indices[trial + 1] - block_indices[trial] - (max_foreperiod + 1)
+            )
+
+    df.to_csv(f"{filename}.csv")

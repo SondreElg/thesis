@@ -8,9 +8,16 @@ from pureples.shared.gym_runner import (
 )
 from pureples.shared.visualize import (
     draw_net,
+    make_genome_matrix,
     draw_pattern,
     draw_es,
     draw_hebbian,
+    draw_average_node_output,
+    draw_individual_node_output,
+    draw_average_node_output_around_go,
+    calculate_and_plot_statistics,
+    plot_fitness_over_time_for_subfolders,
+    network_output_matrix,
 )
 from pureples.shared.substrate import Substrate
 from pureples.shared.concurrent_neat_population import Population

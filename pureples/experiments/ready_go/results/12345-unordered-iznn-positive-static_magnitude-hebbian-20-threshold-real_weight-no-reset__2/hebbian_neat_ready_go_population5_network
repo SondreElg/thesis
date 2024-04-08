@@ -1,6 +1,0 @@
-digraph {
-	node [fontsize=9 height=0.2 shape=circle width=0.2]
-	ready [fillcolor=yellow shape=box style=filled]
-	go [fillcolor=green shape=box style=filled]
-	o1 [fillcolor=lightblue style=filled]
-}

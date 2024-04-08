@@ -1,6 +1,7 @@
 """
 All logic concerning ES-HyperNEAT resides here.
 """
+
 import copy
 import neat
 import numpy as np

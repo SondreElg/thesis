@@ -46,7 +46,11 @@ class Population(object):
             )
             self.generation = 0
             self.species.speciate(config, self.population, self.generation)
+            # self.best_genome = None
         else:
+            # self.population, self.species, self.generation, self.best_genome = (
+            #     initial_state
+            # )
             self.population, self.species, self.generation = initial_state
 
         self.best_genome = None
