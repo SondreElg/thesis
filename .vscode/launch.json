@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["--config", "pureples/experiments/ready_go/results/results-normal_03/config_neat_ready_go", "--load", "pureples/experiments/ready_go/results/results-normal_03/hebbian_neat_ready_go_population1/genome.pkl", "--target_folder", "test", "--overwrite", "True", "--log_level", "-1", "--ordering", "[0,1,2,3,4]"]
+        }
+    ]
+}
