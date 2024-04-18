@@ -39,7 +39,7 @@ config = None
 population = None
 args = None
 root = "c:/Users/Sondr/pureples/experiments/rg/temper"
-target_base = "c:/Users/Sondr/pureples/experiments/rg/meetings/04-03"
+target_base = "c:/Users/Sondr/pureples/experiments/rg/meetings/04-19"
 target_folder = None
 
 dir_entries = os.listdir(root)
@@ -55,13 +55,7 @@ for folder in [
             population = os.path.join(root, folder, file).replace("\\", "/")
         if "args.txt" in file:
             arguments = os.path.join(root, folder, file).replace("\\", "/")
-    print(config)
-    print(population)
-    print(target_folder)
-    # print(arguments)
-    print("")
     args = extract_args_from_string(arguments)
-    # print(args)
     args["gens"] = 0
     args["log_level"] = 2
     args["config"] = config
@@ -77,8 +71,12 @@ for folder in [
     args["ordering"] = [x for x in range(len(args["foreperiods"]))]
 
     args_string = " ".join([f'--{key} "{val}"' for key, val in args.items()])
-    # print(args_string)
-    run(f"python experiments/rg/hebbian_rnn_neat_ready_go.py {args_string}")
+    print(
+        f"python pureples/es_hyperneat_rnn/rg/hebbian_rnn_neat_ready_go.py {args_string}\n"
+    )
+    run(
+        f"python pureples/es_hyperneat_rnn/rg/hebbian_rnn_neat_ready_go.py {args_string}"
+    )
 
 calculate_and_plot_statistics(
     target_base,

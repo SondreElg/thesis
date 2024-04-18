@@ -573,6 +573,138 @@ def pad_output_delays(
     return padded_output, delay_split
 
 
+def process_output(
+    cycle_len,
+    cycle_delay_max,
+    all_outputs,
+    trials,
+    *,
+    include_previous=False,
+    only_last=False,
+    only_last_of_previous=False,
+    custom_range=None,
+    last_max_delay=False,
+    end_tests=0,
+    shape=("delay_block", "node_count", "foreperiod_blocks", "trials", "max_trial_len"),
+):
+    shape_map = {
+        "delay_block": 0,
+        "node_count": 1,
+        "foreperiod_blocks": 2,
+        "trials": 3,
+        "max_trial_len": 4,
+    }
+    max_foreperiod = cycle_len - cycle_delay_max
+    only_last = only_last or last_max_delay
+    indices = np.empty((len(all_outputs)), dtype=object)
+    dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
+    # dim = np.append(np.arange(1, cycle_len), np.arange(cycle_len))
+
+    nodes = all_outputs[0][0].keys()
+
+    # Calculate the number of rows needed for a 3-column layout
+    num_nodes = len(nodes)
+
+    # shape: (delay_block, node_count, foreperiod_blocks, trials, max_trial_len)
+    delay_split = np.empty(
+        (cycle_delay_max, num_nodes, len(all_outputs), trials, len(dim)), dtype=float
+    )
+    delay_split.fill(np.nan)
+
+    #  Plot each node in its respective subplot
+    previous_output = [
+        None for _ in nodes
+    ]  # NEED TO HAVE AN ENTRY FOR EACH NODE IN THIS ARRAY
+    for block in range(len(all_outputs)):
+        for idx, node in enumerate(nodes):
+            node_outputs = np.array(
+                [entry[node] for entry in all_outputs[block]], dtype=float
+            )
+            if node == -1:
+                indices[block] = np.append(
+                    np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
+                )
+                if end_tests:
+                    indices[block] = indices[block][0:-(end_tests)]
+                if only_last:
+                    if last_max_delay:
+                        for index in range(-1, -len(indices) + 2, -1):
+                            if (
+                                indices[block][index - 2] - indices[block][index]
+                                == cycle_len * 2 + 1
+                            ):
+                                indices[block] = indices[block][index - 2 : index]
+                                break
+                    if indices[block][-1] - indices[block][0] > cycle_len * 2:
+                        indices[block] = indices[block][-3:]
+                if custom_range:
+                    indices[block] = indices[block][custom_range[0] : custom_range[1]]
+
+            block_indices = indices[block]
+            entries = previous_output[idx] if previous_output[idx] is not None else []
+            if only_last_of_previous:
+                entries.append(
+                    np.concatenate(
+                        (
+                            [0],
+                            np.pad(
+                                node_outputs[block_indices[0] : block_indices[1]],
+                                (
+                                    0,
+                                    cycle_len
+                                    - len(
+                                        node_outputs[
+                                            block_indices[0] : block_indices[1]
+                                        ]
+                                    ),
+                                ),
+                                constant_values=(np.nan,),
+                            ),
+                        )
+                    )
+                )
+            # print(f"{previous_output=}")
+            # print(f"{entries=}")
+            for i in range(len(block_indices) - 2):
+                # print(f"{block_indices[i]}:{block_indices[i+1]}")
+
+                if only_last_of_previous:
+                    first_half = node_outputs[block_indices[i]]
+                else:
+                    first_half = np.pad(
+                        node_outputs[block_indices[i] : block_indices[i + 1]],
+                        (
+                            0,
+                            cycle_len
+                            - len(
+                                node_outputs[block_indices[i] : block_indices[i + 1]]
+                            ),
+                        ),
+                        constant_values=(np.nan,),
+                    )
+                second_half = np.pad(
+                    node_outputs[block_indices[i + 1] : block_indices[i + 2]],
+                    (
+                        0,
+                        cycle_len
+                        - len(
+                            node_outputs[block_indices[i + 1] : block_indices[i + 2]]
+                        ),
+                    ),
+                    constant_values=(np.nan,),
+                )
+                # print(delay_split)
+                delay_first = (
+                    block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
+                )
+                delay_split[delay_first][idx][block][i] = np.append(
+                    first_half, second_half
+                )
+            if include_previous:
+                previous_output[idx] = [np.append(first_half, second_half)]
+    return np.moveaxis(delay_split, [0, 1, 2, 3, 4], [shape_map[x] for x in shape])
+
+
 def draw_average_node_output(
     cycle_len,
     cycle_delay_max,
@@ -852,6 +984,183 @@ def draw_individual_node_output(
 ):
     max_foreperiod = cycle_len - cycle_delay_max
     only_last = only_last or last_max_delay
+    dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
+    # dim = np.append(np.arange(1, cycle_len), np.arange(cycle_len))
+
+    nodes = all_outputs[0][0].keys()
+
+    # Calculate the number of rows needed for a 3-column layout
+    num_nodes = len(nodes)
+
+    num_rows = (
+        num_nodes + 2 + 3
+    ) // 3  # Add 2 to ensure that we have enough rows for all nodes
+
+    #  Plot each node in its respective subplot
+    previous_output = [None for _ in nodes]
+    previous_fp = None
+    this_fp = None
+
+    delay_split = process_output(
+        cycle_len,
+        cycle_delay_max,
+        all_outputs,
+        trials,
+        include_previous=include_previous,
+        only_last=only_last,
+        only_last_of_previous=only_last_of_previous,
+        custom_range=custom_range,
+        last_max_delay=last_max_delay,
+        end_tests=end_tests,
+        shape=(
+            "foreperiod_blocks",
+            "node_count",
+            "delay_block",
+            "trials",
+            "max_trial_len",
+        ),
+    )
+    for block in range(len(all_outputs)):
+        # Create subplots in a 3xN grid
+        fig, axes = plt.subplots(
+            num_rows, 3, figsize=(15, num_rows * 5 + 1), sharey=True
+        )  # Adjust the figsize as necessary
+
+        # Flatten the axes array for easy iteration
+        axes = axes.flatten()
+
+        for idx, node in enumerate(nodes):
+            if node == -2:
+                this_fp = np.where(delay_split[block][idx] == 1)[0][0]
+            # plt.xlim((dim[0], dim[-1]))
+            axes[idx].set_title(
+                node_names[node] if node in node_names else f"Node {node}"
+            )
+            axes[idx].set_xlabel("Timestep")
+            axes[idx].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+            if idx % 3 == 0:
+                axes[idx].set_ylabel("Magnitude")
+            for x in [
+                0 if only_last_of_previous else -cycle_delay_max,
+                0,
+                max_foreperiod,
+            ]:
+                axes[idx].axvline(
+                    x=x,
+                    ymin=0.0,
+                    ymax=1,
+                    c="gray",
+                    linewidth=1,
+                    linestyle="-" if x == 0 else "--",
+                    zorder=-1,
+                    clip_on=False,
+                )
+
+            entries = np.concatenate(
+                [
+                    (
+                        [previous_output[idx]]
+                        if np.any(previous_output[idx])
+                        else np.full(delay_split[block][idx][0].shape, np.nan)
+                    ),
+                    *delay_split[block][idx],
+                ]
+            )
+            if delay_buckets:
+                delay_plots = []
+                markers = []
+                overall_std = np.nanstd(entries, axis=0)
+                axes[idx].plot(
+                    dim,
+                    np.where(overall_std <= 0.02, overall_std, np.nan),
+                    marker="o",
+                    markersize=10,
+                    linestyle="",
+                    c="black",
+                )
+                for delay_index, delay_block in enumerate(delay_split[block][idx]):
+                    delay_plots.append(
+                        axes[idx].plot(
+                            dim,
+                            np.nanmean(delay_block, axis=0),
+                            c=colors[delay_index],
+                            alpha=0.7,
+                        )
+                    )
+                    delay_std = np.nanstd(delay_block, axis=0)
+                    markers.append(
+                        axes[idx].plot(
+                            dim,
+                            np.where(delay_std <= 0.02, delay_std, np.nan),
+                            marker=f"{(delay_index % 4) + 1}",
+                            markersize=15,
+                            linestyle="",
+                            c=colors[delay_index],
+                        )
+                    )
+                axes[idx].legend(
+                    handles=[delay_plot[0] for delay_plot in markers],
+                    labels=[i for i in range(len(delay_plots))],
+                    loc="upper right",
+                )
+            else:
+                for entry_index, entry in enumerate(entries):
+                    axes[idx].plot(
+                        dim,
+                        entry,
+                        label=(
+                            entry_index
+                            if previous_output[idx] == None or entry_index != 0
+                            else f"fp{previous_fp}"
+                        ),
+                    )
+                axes[idx].legend(loc="upper right")
+                axes[idx].plot(
+                    dim,
+                    np.nanmean(delay_block[idx][block], axis=0),
+                    c=colors[block],
+                    label=block + 1,
+                    alpha=0.7,
+                )
+                axes[idx].legend(loc="upper right")
+            previous_output[idx] = entries[-1]
+            previous_fp = this_fp
+
+            # If there are any empty subplots, turn them off
+            for ax in axes[num_nodes:]:
+                ax.axis("off")
+
+            fig.savefig(f"{filename}-fp{block+1}", dpi=300, bbox_inches="tight")
+    plt.close("all")
+
+
+def _draw_individual_node_output(
+    cycle_len,
+    cycle_delay_max,
+    network_input,
+    all_outputs,
+    filename,
+    trials,
+    *,
+    include_previous=False,
+    only_last=False,
+    only_last_of_previous=False,
+    custom_range=None,
+    last_max_delay=False,
+    end_tests=0,
+    log_level=0,
+    node_names={
+        -1: "ready",
+        -2: "go",
+        0: "output",
+        # 1: "output2",
+    },
+    average=False,
+    delay_buckets=False,
+    colors=standard_colors,
+):
+    max_foreperiod = cycle_len - cycle_delay_max
+    only_last = only_last or last_max_delay
     indices = np.empty((len(all_outputs)), dtype=object)
     dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
     # dim = np.append(np.arange(1, cycle_len), np.arange(cycle_len))
@@ -872,9 +1181,7 @@ def draw_individual_node_output(
     ) // 3  # Add 2 to ensure that we have enough rows for all nodes
 
     #  Plot each node in its respective subplot
-    previous_output = [
-        None for _ in nodes
-    ]  # NEED TO HAVE AN ENTRY FOR EACH NODE IN THIS ARRAY
+    previous_output = [None for _ in nodes]
     for block in range(len(all_outputs)):
         # Create subplots in a 3xN grid
         fig, axes = plt.subplots(
@@ -993,14 +1300,14 @@ def draw_individual_node_output(
                 entries.append(np.append(first_half, second_half))
             entries = np.array(entries)
             if delay_buckets:
-                print(delay_split[block].shape)
+                # print(delay_split[block].shape)
                 delay_plots = []
                 markers = []
                 overall_std = np.nanstd(entries, axis=0)
                 axes[idx].plot(
                     dim,
                     np.where(overall_std <= 0.02, overall_std, np.nan),
-                    marker=f"o",
+                    marker="o",
                     markersize=10,
                     linestyle="",
                     c="black",
@@ -1020,9 +1327,9 @@ def draw_individual_node_output(
                         )
                     )
                     # for entry in delay_block:
-                    print(delay_block[0])
+                    # print(delay_block[0])
                     delay_std = np.nanstd(delay_block, axis=0)
-                    print(delay_std)
+                    # print(delay_std)
                     markers.append(
                         axes[idx].plot(
                             dim,
@@ -1092,31 +1399,32 @@ def draw_foreperiod_adaptation(
 ):
     max_foreperiod = cycle_len - cycle_delay_max
     only_last = only_last or last_max_delay
-    indices = np.empty((len(all_outputs)), dtype=object)
     dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
     # dim = np.append(np.arange(1, cycle_len), np.arange(cycle_len))
-
-    previous_fp = None
 
     nodes = all_outputs[0][0].keys()
 
     # Calculate the number of rows needed for a 3-column layout
     num_nodes = len(nodes)
 
-    delay_split = np.empty(
-        (cycle_delay_max, len(nodes), len(all_outputs), trials, len(dim)), dtype=float
-    )
-    delay_split.fill(np.nan)
-
     num_rows = (
         num_nodes + 2 + 3
     ) // 3  # Add 2 to ensure that we have enough rows for all nodes
 
-    #  Plot each node in its respective subplot
-    previous_output = [
-        None for _ in nodes
-    ]  # NEED TO HAVE AN ENTRY FOR EACH NODE IN THIS ARRAY
-    for block in range(len(all_outputs)):
+    delay_split = process_output(
+        cycle_len,
+        cycle_delay_max,
+        all_outputs,
+        trials,
+        include_previous=include_previous,
+        only_last=only_last,
+        only_last_of_previous=only_last_of_previous,
+        custom_range=custom_range,
+        last_max_delay=last_max_delay,
+        end_tests=end_tests,
+    )
+
+    for delay_index, delay_block in enumerate(delay_split):
         # Create subplots in a 3xN grid
         fig, axes = plt.subplots(
             num_rows, 3, figsize=(15, num_rows * 5 + 1), sharey=True
@@ -1124,6 +1432,7 @@ def draw_foreperiod_adaptation(
 
         # Flatten the axes array for easy iteration
         axes = axes.flatten()
+
         for idx, node in enumerate(nodes):
             # plt.xlim((dim[0], dim[-1]))
             axes[idx].set_title(
@@ -1148,159 +1457,19 @@ def draw_foreperiod_adaptation(
                     zorder=-1,
                     clip_on=False,
                 )
-            node_outputs = np.array(
-                [entry[node] for entry in all_outputs[block]], dtype=float
-            )
-            if node == -2:
-                this_fp = np.where(node_outputs == 1)[0][0]
-            if node == -1:
-                indices[block] = np.append(
-                    np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
-                )
-                if end_tests:
-                    indices[block] = indices[block][0:-(end_tests)]
-                if only_last:
-                    if last_max_delay:
-                        for index in range(-1, -len(indices) + 2, -1):
-                            if (
-                                indices[block][index - 2] - indices[block][index]
-                                == cycle_len * 2 + 1
-                            ):
-                                indices[block] = indices[block][index - 2 : index]
-                                break
-                    if indices[block][-1] - indices[block][0] > cycle_len * 2:
-                        indices[block] = indices[block][-3:]
-                if custom_range:
-                    indices[block] = indices[block][custom_range[0] : custom_range[1]]
-
-            block_indices = indices[block]
-            entries = previous_output[idx] if previous_output[idx] != None else []
-            if only_last_of_previous:
-                entries.append(
-                    np.concatenate(
-                        (
-                            [0],
-                            np.pad(
-                                node_outputs[block_indices[0] : block_indices[1]],
-                                (
-                                    0,
-                                    cycle_len
-                                    - len(
-                                        node_outputs[
-                                            block_indices[0] : block_indices[1]
-                                        ]
-                                    ),
-                                ),
-                                constant_values=(np.nan,),
-                            ),
-                        )
-                    )
-                )
-            # print(f"{previous_output=}")
-            # print(f"{entries=}")
-            for i in range(len(block_indices) - 2):
-                # print(f"{block_indices[i]}:{block_indices[i+1]}")
-
-                if only_last_of_previous:
-                    first_half = node_outputs[block_indices[i]]
-                else:
-                    first_half = np.pad(
-                        node_outputs[block_indices[i] : block_indices[i + 1]],
-                        (
-                            0,
-                            cycle_len
-                            - len(
-                                node_outputs[block_indices[i] : block_indices[i + 1]]
-                            ),
-                        ),
-                        constant_values=(np.nan,),
-                    )
-                second_half = np.pad(
-                    node_outputs[block_indices[i + 1] : block_indices[i + 2]],
-                    (
-                        0,
-                        cycle_len
-                        - len(
-                            node_outputs[block_indices[i + 1] : block_indices[i + 2]]
-                        ),
-                    ),
-                    constant_values=(np.nan,),
-                )
-                # print(delay_split)
-                delay_first = (
-                    block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
-                )
-                delay_split[block][delay_first][i] = np.append(first_half, second_half)
-                entries.append(np.append(first_half, second_half))
-            entries = np.array(entries)
-            if delay_buckets:
-                print(delay_split[block].shape)
-                delay_plots = []
-                markers = []
-                overall_std = np.nanstd(entries, axis=0)
+            for block in range(len(all_outputs)):
                 axes[idx].plot(
                     dim,
-                    np.where(overall_std <= 0.02, overall_std, np.nan),
-                    marker=f"o",
-                    markersize=10,
-                    linestyle="",
-                    c="black",
+                    np.nanmean(delay_block[idx][block], axis=0),
+                    c=colors[block],
+                    label=block + 1,
                 )
-                for delay_index, delay_block in enumerate(delay_split[block]):
-                    # delay_plots.append(
-                    #     axes[idx].plot(dim, delay_block.T, c=colors[delay_index]),
-                    #     linestyle="--",
-                    # )
-                    axes[idx].plot(
-                        dim,
-                        np.average(delay_block, axis=0),
-                        c=colors[delay_index],
-                        linestyle="--",
-                    )
-                    # for entry in delay_block:
-                    print(delay_block[0])
-                    delay_std = np.nanstd(delay_block, axis=0)
-                    print(delay_std)
-                    markers.append(
-                        axes[idx].plot(
-                            dim,
-                            np.where(delay_std <= 0.02, delay_std, np.nan),
-                            marker=f"{(delay_index % 4) + 1}",
-                            markersize=15,
-                            linestyle="",
-                            c=colors[delay_index],
-                        )
-                    )
-                axes[idx].legend(
-                    handles=[delay_plot[0] for delay_plot in markers],
-                    labels=[i for i in range(len(delay_plots))],
-                    loc="upper right",
-                )
-            else:
-                for entry_index, entry in enumerate(entries):
-                    axes[idx].plot(
-                        dim,
-                        entry,
-                        label=(
-                            entry_index
-                            if previous_output[idx] == None or entry_index != 0
-                            else f"fp{previous_fp}"
-                        ),
-                    )
-                axes[idx].legend(loc="upper right")
+            axes[idx].legend(loc="upper right")
             # If there are any empty subplots, turn them off
             for ax in axes[num_nodes:]:
                 ax.axis("off")
 
-            # print(f"{include_previous=}")
-            if include_previous:
-                previous_output[idx] = [np.append(first_half, second_half)]
-                # print(f"{previous_output=}")
-
-        # plt.tight_layout()
-        fig.savefig(f"{filename}-fp{block+1}", dpi=300, bbox_inches="tight")
-        previous_fp = this_fp
-
+        fig.savefig(f"{filename}-delay{delay_index}", dpi=300, bbox_inches="tight")
     plt.close("all")
 
 
@@ -1911,7 +2080,7 @@ def plot_fitness_over_time(
     folder_list, csv_filename, output_filename="fitness_over_time", columns=3
 ):
     """Plot the best and average fitness over time for each population in the folder list."""
-    num_rows = len(folder_list) // columns
+    num_rows = len(folder_list) // columns + 1
     fig, axes = plt.subplots(
         num_rows, columns, figsize=(20, num_rows * 5 + 1), sharey=True
     )

@@ -42,13 +42,16 @@ from pureples.shared.hebbian_rnn_plus import HebbianRecurrentDecayingNetwork
 from pureples.shared.distributions import bimodal
 from pureples.shared.IZNodeGene_plus import IZNN, IZGenome
 
+np.random.seed(0)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--gens", default="1")
 parser.add_argument("--target_folder", default=None)
 parser.add_argument("--suffix", default="")
 parser.add_argument("--load", default=None)
-parser.add_argument("--config", default="results/rg/config_neat_ready_go")
+parser.add_argument(
+    "--config", default="pureples/es_hyperneat_rnn/rg/config_neat_ready_go"
+)
 parser.add_argument(
     "--hebbian_type", default="positive", choices=["positive", "signed", "unsigned"]
 )  # not yet implemented
@@ -268,6 +271,18 @@ def run_rnn(
             cycle_len=cycle_len,
             cycle_delay_max=cycle_delay_range[1],
         )
+        draw_foreperiod_adaptation(
+            cycle_len,
+            cycle_delay_range[1],
+            np.array(inputs),
+            all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
+            os.path.join(visualize, "foreperiod_output_growth"),
+            trials,
+            include_previous=True,
+            only_last_of_previous=True,
+            delay_buckets=True,
+            end_tests=end_tests,
+        )
         for index, entry in enumerate(["first", "second", "third", "fourth"]):
             draw_average_node_output(
                 cycle_len,
@@ -285,12 +300,11 @@ def run_rnn(
             cycle_delay_range[1],
             np.array(inputs),
             all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-            os.path.join(visualize, "individual_node_outputs"),
+            os.path.join(visualize, "foreperiod_output_growth"),
             trials,
             include_previous=True,
             only_last_of_previous=True,
             delay_buckets=True,
-            custom_range=[0, 7],
             end_tests=end_tests,
         )
     # print(f"{key=} - {np.mean(network_fitness)=}")
@@ -439,7 +453,9 @@ if __name__ == "__main__":
     if "c:" in folder_name.lower():
         save_dir = folder_name
     else:
-        save_dir = os.path.join(os.path.dirname(__file__), f"results/{folder_name}")
+        save_dir = os.path.join(
+            os.path.dirname(__file__), f"experiments/rg/{folder_name}"
+        )
     similar_run = 0
     if os.path.exists(save_dir) and bool(literal_eval(args.overwrite)):
         with os.scandir(save_dir) as entries:

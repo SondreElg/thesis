@@ -1,6 +1,6 @@
 # Experiment results
-experiments/*/meetings/**
-experiments/*/temp/**
+experiments/rg/*
+!experiments/rg/thesis_networks/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
