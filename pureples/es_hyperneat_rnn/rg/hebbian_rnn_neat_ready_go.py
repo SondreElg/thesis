@@ -46,6 +46,7 @@ np.random.seed(0)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--gens", default="1")
+parser.add_argument("--base_folder", default="experiments/rg")
 parser.add_argument("--target_folder", default=None)
 parser.add_argument("--suffix", default="")
 parser.add_argument("--load", default=None)
@@ -372,7 +373,7 @@ def run(*, gens, max_trials=1, initial_pop=None):
     stats_one = neat.StatisticsReporter()
     pop = (
         ini_pop(initial_pop, CONFIG, stats_one)
-        if type(initial_pop) == list
+        if type(initial_pop) == list or initial_pop is None
         else initial_pop
     )
     pe = neat.ParallelEvaluator(4, _eval_fitness)
@@ -447,14 +448,14 @@ if __name__ == "__main__":
     folder_name = (
         args.target_folder
         if args.target_folder
-        else f"{args.experiment}-{node_weights}-{args.model}-{args.hebbian_type}-{hebbian_magnitude}-{('%.2f' % args.firing_threshold).split('.')[1]}-threshold-{reset}{args.suffix}"
+        else f"{args.experiment}-{node_weights}-{args.model}-{args.hebbian_type}-{hebbian_magnitude}-{('%.2f' % float(args.firing_threshold)).split('.')[1]}-threshold-{reset}{args.suffix}"
     )
 
     if "c:" in folder_name.lower():
         save_dir = folder_name
     else:
         save_dir = os.path.join(
-            os.path.dirname(__file__), f"experiments/rg/{folder_name}"
+            args.base_folder, folder_name
         )
     similar_run = 0
     if os.path.exists(save_dir) and bool(literal_eval(args.overwrite)):
