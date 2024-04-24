@@ -14,6 +14,8 @@ from subprocess import run
 import os
 import re
 
+# TODO: Make visualization possible without rerunning populations/networks
+
 
 def extract_args_from_string(filename):
     """Extract command line arguments from a .txt file and save them as key-value pairs in a dictionary,
@@ -39,7 +41,7 @@ config = None
 population = None
 args = None
 root = "c:/Users/Sondr/pureples/experiments/rg/temper"
-target_base = "c:/Users/Sondr/pureples/experiments/rg/meetings/04-19"
+target_base = "c:/Users/Sondr/pureples/experiments/rg/meetings/04-24"
 target_folder = None
 
 dir_entries = os.listdir(root)
@@ -57,7 +59,7 @@ for folder in [
             arguments = os.path.join(root, folder, file).replace("\\", "/")
     args = extract_args_from_string(arguments)
     args["gens"] = 0
-    args["log_level"] = 2
+    args["log_level"] = -1
     args["config"] = config
     args["load"] = population
     args["target_folder"] = target_folder

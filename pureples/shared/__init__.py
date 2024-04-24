@@ -18,6 +18,7 @@ from pureples.shared.visualize import (
     calculate_and_plot_statistics,
     plot_fitness_over_time_for_subfolders,
     network_output_matrix,
+    process_output,
 )
 from pureples.shared.substrate import Substrate
 from pureples.shared.concurrent_neat_population import Population

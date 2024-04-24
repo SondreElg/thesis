@@ -3,6 +3,7 @@ Varying visualisation tools.
 """
 
 import os
+import posixpath
 import pickle
 import warnings
 import math
@@ -13,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import seaborn as sns
 import pandas as pd
+from enum import IntEnum
 
 standard_colors = [
     "blue",
@@ -48,6 +50,380 @@ standard_colors = [
     "lightsalmon",
     "lightgold",
 ]
+
+
+class ShapeMap(IntEnum):
+    delay_block = 0
+    node_count = 1
+    foreperiod_blocks = 2
+    trials = 3
+    max_trial_len = 4
+
+
+lesion_types = {
+    0: "no lesion",
+    1: "interneuron feedback lesion",
+    2: "output feedback lesion",
+    3: "other",
+}
+
+
+def _reshape_processed_output(array, shape_order, original_shape_order=[0, 1, 2, 3, 4]):
+    return np.moveaxis(array, original_shape_order, shape_order)
+
+
+def _classify_network_lesion(filepath):
+    """
+    Classify what kind of lesion the network is
+    0 = no lesion
+    1 = interneuron feedback lesion
+    2 = output feedback lesion
+    3 = other
+    """
+    # print(filepath)
+    with open(filepath, "rb") as f:
+        genome = pickle.load(f)
+
+    lesion_type = 0
+    for cg in genome.connections.values():
+        if not cg.enabled:
+            input, output = cg.key
+            if input == 0:
+                lesion_type += 2
+            else:
+                lesion_type = lesion_type * 3 + 1
+    return min(lesion_type, 3)
+
+
+def plot_tthp_vs_z_score(folder_path, filename):
+    """
+    Map the TtHP and Z-score indexes against each other in a plot
+    TODO: Color output for each network type
+    """
+
+    file_paths = np.array(
+        [
+            posixpath.join(root, file).replace("\\", "/")
+            for root, _, files in os.walk(folder_path)
+            for file in files
+            if ".npy" in file
+        ]
+    )
+    # print(file_paths)
+    node_output_files = np.array([np.load(path) for path in file_paths])
+    lesion_classification = np.array(
+        [
+            _classify_network_lesion(path.replace("processed_output.npy", "genome.pkl"))
+            for path in file_paths
+        ]
+    )
+
+    z_scores = np.array([z_score(file) for file in node_output_files])
+    tthps = np.array([tthp_vs_fp(file) for file in node_output_files])
+    fig = plt.figure()
+    ax = plt.gca()
+    # ax.set_yscale("symlog")
+    ax.set_xlabel("Z-score")
+    ax.set_ylabel("TTHP correlation")
+
+    markers = ["o", "s", "D", "*"]
+    legend_handles = []
+    for delay_index in range(z_scores.shape[1]):
+        legend_handles.append(
+            matplotlib.lines.Line2D(
+                [],
+                [],
+                color=standard_colors[delay_index],
+                label=f"delay {delay_index}",
+            )
+        )
+    for marker_index in range(len(markers)):
+        legend_handles.append(
+            matplotlib.lines.Line2D(
+                [],
+                [],
+                color="black",
+                marker=markers[marker_index],
+                markersize=10,
+                linestyle="",
+                label=lesion_types[marker_index],
+            )
+        )
+    ax.legend(
+        handles=legend_handles,
+    )
+
+    # for network in range(len(lesion_classification)):
+    #         ax.scatter(
+    #             z_scores[network, delay_block],
+    #             tthps[network, delay_block],
+    #             marker=markers[lesion_classification[network]],
+    #             color=standard_colors[delay_block],
+    #             alpha=0.5,
+    #         )
+
+    for delay_block in range(z_scores.shape[1]):
+        for network in range(len(lesion_classification)):
+            ax.scatter(
+                z_scores[network, delay_block],
+                tthps[network, delay_block],
+                marker=markers[lesion_classification[network]],
+                color=standard_colors[delay_block],
+                alpha=0.5,
+            )
+    plt.savefig(posixpath.join(folder_path, filename), dpi=300)
+
+    # Create subplots in a 3xN grid
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10), sharey=True, sharex=True)
+    axes = axes.flatten()
+    for axis in range(4):
+        if axis % 2 == 0:
+            axes[axis].set_ylabel("TTHP correlation")
+        if axis > 1:
+            axes[axis].set_xlabel("Z-score")
+        axes[axis].legend(
+            handles=legend_handles[: z_scores.shape[1]],
+        )
+        axes[axis].set_title(lesion_types[axis])
+
+    for delay_block in range(z_scores.shape[1]):
+        for network in range(len(lesion_classification)):
+            axes[lesion_classification[network]].scatter(
+                z_scores[network, delay_block],
+                tthps[network, delay_block],
+                marker=markers[lesion_classification[network]],
+                color=standard_colors[delay_block],
+                alpha=0.5,
+            )
+    plt.savefig(posixpath.join(folder_path, f"{filename}_split"), dpi=300)
+    plt.close("all")
+
+
+def x_given_y(x1, x2, y1, y2, y):
+    # Calculate slope (m)
+    m = (y2 - y1) / (x2 - x1)
+
+    # Calculate y-intercept (b)
+    b = y1 - m * x1
+
+    return (y - b) / m
+
+
+def tthp_vs_fp(node_outputs):
+    """
+    Calculate Time-to-Half-Peak for each FP and return the correlation coefficient across trials as output
+    Split output across delay timings
+
+    TODO: Check if first FP should be skipped
+    TODO: Verify math is correct
+    """
+    output_array = _reshape_processed_output(
+        node_outputs,
+        [
+            ShapeMap.node_count,
+            ShapeMap.delay_block,
+            ShapeMap.foreperiod_blocks,
+            ShapeMap.trials,
+            ShapeMap.max_trial_len,
+        ],
+    )
+    output_array = output_array[2]
+    tthp = np.empty(output_array.shape[:2])
+    for delay_index, delay_block in enumerate(output_array):
+        for fp_index, fp_block in enumerate(delay_block):
+            fp_max_indices = np.argmax(fp_block, axis=1) - 1
+            fp_half_peaks = np.empty_like(fp_max_indices)
+            fp_peaks = fp_block[:, fp_index + 1]  # Do I even need flatten?
+            for trial_index, trial in enumerate(fp_block):
+                trial = trial[: len(trial) // 2]
+                start_val = trial[0]
+                if math.isnan(start_val):
+                    fp_peaks[trial_index] = np.nan
+                    continue
+                diff_val = fp_peaks[trial_index] - start_val
+                if diff_val <= 0:
+                    fp_peaks[trial_index] = np.nan
+                    continue
+                half_peak_val = start_val + diff_val / 2
+                prev_output = start_val
+                for output_index, output in enumerate(trial[1:]):
+                    if output >= half_peak_val:
+                        fp_half_peaks[trial_index] = x_given_y(
+                            output_index,
+                            output_index + 1,
+                            prev_output,
+                            output,
+                            half_peak_val,
+                        )
+                        break
+                    prev_output = output
+            tthp[delay_index, fp_index] = np.corrcoef(fp_half_peaks, fp_max_indices)[
+                0, 1
+            ]
+    # print(tthp.shape)
+    return np.median(tthp, axis=1)
+
+
+def z_score(node_outputs):
+    """
+    Calculate the Z-score for each FP and return the median as output
+    """
+    output_array = _reshape_processed_output(
+        node_outputs,
+        [
+            ShapeMap.node_count,
+            ShapeMap.delay_block,
+            ShapeMap.foreperiod_blocks,
+            ShapeMap.trials,
+            ShapeMap.max_trial_len,
+        ],
+    )[2]
+    z_scores = np.empty(output_array.shape[:2])
+    for delay_index, delay_block in enumerate(output_array):
+        for fp_index, fp_block in enumerate(delay_block):
+            fp_std = np.nanstd(fp_block)
+            fp_maxes = np.nanmax(fp_block, axis=1)
+            mask = ~np.isnan(fp_maxes)
+            fp_maxes = fp_maxes[mask]
+            fp_max_max = np.max(fp_maxes)
+            fp_max_mean = np.mean(fp_maxes)
+            z_scores[delay_index, fp_index] = (fp_max_max - fp_max_mean) / fp_std
+    return np.median(z_scores, axis=1)
+
+
+def process_output(
+    cycle_len,
+    cycle_delay_max,
+    all_outputs,
+    trials,
+    *,
+    include_previous=False,
+    only_last=False,
+    only_last_of_previous=False,
+    custom_range=None,
+    last_max_delay=False,
+    end_tests=0,
+    shape=[
+        ShapeMap.delay_block,
+        ShapeMap.node_count,
+        ShapeMap.foreperiod_blocks,
+        ShapeMap.trials,
+        ShapeMap.max_trial_len,
+    ],
+    filename=None,
+):
+    max_foreperiod = cycle_len - cycle_delay_max
+    only_last = only_last or last_max_delay
+    indices = np.empty((len(all_outputs)), dtype=object)
+    dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
+    # dim = np.append(np.arange(1, cycle_len), np.arange(cycle_len))
+
+    nodes = all_outputs[0][0].keys()
+
+    # Calculate the number of rows needed for a 3-column layout
+    num_nodes = len(nodes)
+
+    # shape: (delay_block, node_count, foreperiod_blocks, trials, max_trial_len)
+    delay_split = np.empty(
+        (cycle_delay_max, num_nodes, len(all_outputs), trials, len(dim)), dtype=float
+    )
+    delay_split.fill(np.nan)
+
+    #  Plot each node in its respective subplot
+    previous_output = [
+        None for _ in nodes
+    ]  # NEED TO HAVE AN ENTRY FOR EACH NODE IN THIS ARRAY
+    for block in range(len(all_outputs)):
+        for idx, node in enumerate(nodes):
+            node_outputs = np.array(
+                [entry[node] for entry in all_outputs[block]], dtype=float
+            )
+            if node == -1:
+                indices[block] = np.append(
+                    np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
+                )
+                if end_tests:
+                    indices[block] = indices[block][0:-(end_tests)]
+                if only_last:
+                    if last_max_delay:
+                        for index in range(-1, -len(indices) + 2, -1):
+                            if (
+                                indices[block][index - 2] - indices[block][index]
+                                == cycle_len * 2 + 1
+                            ):
+                                indices[block] = indices[block][index - 2 : index]
+                                break
+                    if indices[block][-1] - indices[block][0] > cycle_len * 2:
+                        indices[block] = indices[block][-3:]
+                if custom_range:
+                    indices[block] = indices[block][custom_range[0] : custom_range[1]]
+
+            block_indices = indices[block]
+            entries = previous_output[idx] if previous_output[idx] is not None else []
+            if only_last_of_previous:
+                entries.append(
+                    np.concatenate(
+                        (
+                            [0],
+                            np.pad(
+                                node_outputs[block_indices[0] : block_indices[1]],
+                                (
+                                    0,
+                                    cycle_len
+                                    - len(
+                                        node_outputs[
+                                            block_indices[0] : block_indices[1]
+                                        ]
+                                    ),
+                                ),
+                                constant_values=(np.nan,),
+                            ),
+                        )
+                    )
+                )
+            # print(f"{previous_output=}")
+            # print(f"{entries=}")
+            for i in range(len(block_indices) - 2):
+                # print(f"{block_indices[i]}:{block_indices[i+1]}")
+
+                if only_last_of_previous:
+                    first_half = node_outputs[block_indices[i]]
+                else:
+                    first_half = np.pad(
+                        node_outputs[block_indices[i] : block_indices[i + 1]],
+                        (
+                            0,
+                            cycle_len
+                            - len(
+                                node_outputs[block_indices[i] : block_indices[i + 1]]
+                            ),
+                        ),
+                        constant_values=(np.nan,),
+                    )
+                second_half = np.pad(
+                    node_outputs[block_indices[i + 1] : block_indices[i + 2]],
+                    (
+                        0,
+                        cycle_len
+                        - len(
+                            node_outputs[block_indices[i + 1] : block_indices[i + 2]]
+                        ),
+                    ),
+                    constant_values=(np.nan,),
+                )
+                # print(delay_split)
+                delay_first = (
+                    block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
+                )
+                delay_split[delay_first][idx][block][i] = np.append(
+                    first_half, second_half
+                )
+            if include_previous:
+                previous_output[idx] = [np.append(first_half, second_half)]
+    result = _reshape_processed_output(delay_split, shape)
+    if filename:
+        np.save(filename, result)
+    return result
 
 
 def draw_net(
@@ -573,138 +949,6 @@ def pad_output_delays(
     return padded_output, delay_split
 
 
-def process_output(
-    cycle_len,
-    cycle_delay_max,
-    all_outputs,
-    trials,
-    *,
-    include_previous=False,
-    only_last=False,
-    only_last_of_previous=False,
-    custom_range=None,
-    last_max_delay=False,
-    end_tests=0,
-    shape=("delay_block", "node_count", "foreperiod_blocks", "trials", "max_trial_len"),
-):
-    shape_map = {
-        "delay_block": 0,
-        "node_count": 1,
-        "foreperiod_blocks": 2,
-        "trials": 3,
-        "max_trial_len": 4,
-    }
-    max_foreperiod = cycle_len - cycle_delay_max
-    only_last = only_last or last_max_delay
-    indices = np.empty((len(all_outputs)), dtype=object)
-    dim = np.arange(-1 if only_last_of_previous else -cycle_len, cycle_len, 1)
-    # dim = np.append(np.arange(1, cycle_len), np.arange(cycle_len))
-
-    nodes = all_outputs[0][0].keys()
-
-    # Calculate the number of rows needed for a 3-column layout
-    num_nodes = len(nodes)
-
-    # shape: (delay_block, node_count, foreperiod_blocks, trials, max_trial_len)
-    delay_split = np.empty(
-        (cycle_delay_max, num_nodes, len(all_outputs), trials, len(dim)), dtype=float
-    )
-    delay_split.fill(np.nan)
-
-    #  Plot each node in its respective subplot
-    previous_output = [
-        None for _ in nodes
-    ]  # NEED TO HAVE AN ENTRY FOR EACH NODE IN THIS ARRAY
-    for block in range(len(all_outputs)):
-        for idx, node in enumerate(nodes):
-            node_outputs = np.array(
-                [entry[node] for entry in all_outputs[block]], dtype=float
-            )
-            if node == -1:
-                indices[block] = np.append(
-                    np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
-                )
-                if end_tests:
-                    indices[block] = indices[block][0:-(end_tests)]
-                if only_last:
-                    if last_max_delay:
-                        for index in range(-1, -len(indices) + 2, -1):
-                            if (
-                                indices[block][index - 2] - indices[block][index]
-                                == cycle_len * 2 + 1
-                            ):
-                                indices[block] = indices[block][index - 2 : index]
-                                break
-                    if indices[block][-1] - indices[block][0] > cycle_len * 2:
-                        indices[block] = indices[block][-3:]
-                if custom_range:
-                    indices[block] = indices[block][custom_range[0] : custom_range[1]]
-
-            block_indices = indices[block]
-            entries = previous_output[idx] if previous_output[idx] is not None else []
-            if only_last_of_previous:
-                entries.append(
-                    np.concatenate(
-                        (
-                            [0],
-                            np.pad(
-                                node_outputs[block_indices[0] : block_indices[1]],
-                                (
-                                    0,
-                                    cycle_len
-                                    - len(
-                                        node_outputs[
-                                            block_indices[0] : block_indices[1]
-                                        ]
-                                    ),
-                                ),
-                                constant_values=(np.nan,),
-                            ),
-                        )
-                    )
-                )
-            # print(f"{previous_output=}")
-            # print(f"{entries=}")
-            for i in range(len(block_indices) - 2):
-                # print(f"{block_indices[i]}:{block_indices[i+1]}")
-
-                if only_last_of_previous:
-                    first_half = node_outputs[block_indices[i]]
-                else:
-                    first_half = np.pad(
-                        node_outputs[block_indices[i] : block_indices[i + 1]],
-                        (
-                            0,
-                            cycle_len
-                            - len(
-                                node_outputs[block_indices[i] : block_indices[i + 1]]
-                            ),
-                        ),
-                        constant_values=(np.nan,),
-                    )
-                second_half = np.pad(
-                    node_outputs[block_indices[i + 1] : block_indices[i + 2]],
-                    (
-                        0,
-                        cycle_len
-                        - len(
-                            node_outputs[block_indices[i + 1] : block_indices[i + 2]]
-                        ),
-                    ),
-                    constant_values=(np.nan,),
-                )
-                # print(delay_split)
-                delay_first = (
-                    block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
-                )
-                delay_split[delay_first][idx][block][i] = np.append(
-                    first_half, second_half
-                )
-            if include_previous:
-                previous_output[idx] = [np.append(first_half, second_half)]
-    return np.moveaxis(delay_split, [0, 1, 2, 3, 4], [shape_map[x] for x in shape])
-
-
 def draw_average_node_output(
     cycle_len,
     cycle_delay_max,
@@ -925,17 +1169,16 @@ def draw_average_node_output(
         axes[idx].legend(loc="upper right")
 
     markers = []
-    for delay in range(delay):
+    for marker_index in range(delay):
         markers.append(
             matplotlib.lines.Line2D(
                 [],
                 [],
                 color="blue",
-                marker=f"{(delay % 4) + 1}",
+                marker=f"{(marker_index % 4) + 1}",
                 markersize=15,
                 linestyle="",
-                label=f"delay {delay}",
-                alpha=0.5,
+                label=f"delay {marker_index}",
             )
         )
 
@@ -1973,10 +2216,10 @@ def extract_key_and_fitness_from_file(file_path):
 def scan_folders_and_extract_info(root_folder, target_file="genome.txt"):
     """Scan through folders starting from 'root_folder' and extract key and fitness values from files."""
     fitness_dict = {}
-    for root, dirs, files in os.walk(root_folder):
+    for root, _, files in os.walk(root_folder):
         for file in files:
             if file == target_file:
-                file_path = os.path.join(root, file)
+                file_path = posixpath.join(root, file)
                 key, fitness = extract_key_and_fitness_from_file(file_path)
                 if key is not None and fitness is not None:
                     fitness_dict[key] = fitness
@@ -2069,7 +2312,9 @@ def calculate_and_plot_statistics(root_folder, patterns, filename="fitness_stati
     for root, folders, files in os.walk(root_folder):
         for folder in folders:
             folder_name = os.path.basename(folder)
-            results[folder] = scan_folders_and_extract_info(os.path.join(root, folder))
+            results[folder] = scan_folders_and_extract_info(
+                posixpath.join(root, folder)
+            )
     grouped_results = group_results_by_key_content(results, patterns)
 
     # Plot and calculate statistics
@@ -2093,7 +2338,7 @@ def plot_fitness_over_time(
     # axes = axes.flatten()
 
     for index, folder in enumerate(folder_list):
-        csv_file_path = os.path.join(folder, csv_filename)
+        csv_file_path = posixpath.join(folder, csv_filename)
         if os.path.exists(csv_file_path):
             # Read the CSV file
             df = pd.read_csv(
@@ -2128,9 +2373,9 @@ def plot_fitness_over_time_for_subfolders(
 ):
     """Plot the best and average fitness over time for each population in the given root folder."""
     folder_list = [
-        os.path.join(root_folder, folder)
+        posixpath.join(root_folder, folder)
         for folder in os.listdir(root_folder)
-        if os.path.isdir(os.path.join(root_folder, folder))
+        if os.path.isdir(posixpath.join(root_folder, folder))
     ]
     plot_fitness_over_time(folder_list, csv_filename, output_filename)
 

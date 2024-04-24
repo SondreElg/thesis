@@ -7,6 +7,7 @@ Fitness threshold set in config
 import copy
 import sys
 import os
+import posixpath
 import pickle
 import math
 import argparse
@@ -34,6 +35,7 @@ from pureples.shared.visualize import (
     plot_fitness_over_time_for_subfolders,
     network_output_matrix,
     draw_foreperiod_adaptation,
+    process_output,
 )
 from pureples.shared.ready_go import ready_go_list, foreperiod_rg_list
 from pureples.shared.population_plus import Population
@@ -216,19 +218,19 @@ def run_rnn(
         )
         if CONFIG.learning_rate > 0:
             plot_hebbian_correlation_heatmap(
-                os.path.join(
+                posixpath.join(
                     visualize,
                     f"block{blocks_of_interest}_fp{foreperiods[blocks_of_interest-1]}_hebbian.csv",
                 ),
                 foreperiods,
-                os.path.join(visualize, "hebbian_correlation_heatmap.png"),
+                posixpath.join(visualize, "hebbian_correlation_heatmap.png"),
             )
         draw_individual_node_output(
             cycle_len,
             cycle_delay_range[1],
             np.array(inputs),
             all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-            os.path.join(visualize, "individual_node_outputs"),
+            posixpath.join(visualize, "individual_node_outputs"),
             trials,
             include_previous=True,
             only_last_of_previous=True,
@@ -241,7 +243,7 @@ def run_rnn(
             cycle_delay_range[1],
             np.array(inputs),
             all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-            os.path.join(visualize, "node_output_average"),
+            posixpath.join(visualize, "node_output_average"),
             trials,
             end_tests=end_tests,
         )
@@ -250,7 +252,7 @@ def run_rnn(
             cycle_delay_range[1],
             np.array(inputs),
             all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-            os.path.join(visualize, "node_output_average_around_go"),
+            posixpath.join(visualize, "node_output_average_around_go"),
             trials,
             end_tests=end_tests,
         )
@@ -259,7 +261,7 @@ def run_rnn(
         #     cycle_delay_range[1],
         #     np.array(inputs),
         #     all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-        #     os.path.join(visualize, "node_output_last"),
+        #     posixpath.join(visualize, "node_output_last"),
         #     trials,
         #     only_last=True,
         #     end_tests=end_tests,
@@ -267,7 +269,7 @@ def run_rnn(
         network_output_matrix(
             network_input=np.array(inputs),
             all_outputs=all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-            filename=os.path.join(visualize, "network_output_matrix"),
+            filename=posixpath.join(visualize, "network_output_matrix"),
             foreperiods=foreperiods[:blocks_of_interest],
             cycle_len=cycle_len,
             cycle_delay_max=cycle_delay_range[1],
@@ -277,12 +279,20 @@ def run_rnn(
             cycle_delay_range[1],
             np.array(inputs),
             all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-            os.path.join(visualize, "foreperiod_output_growth"),
+            posixpath.join(visualize, "foreperiod_output_growth"),
             trials,
             include_previous=True,
             only_last_of_previous=True,
             delay_buckets=True,
             end_tests=end_tests,
+        )
+        process_output(
+            cycle_len,
+            cycle_delay_range[1],
+            all_outputs,
+            trials,
+            end_tests=end_tests,
+            filename=posixpath.join(visualize, "processed_output"),
         )
         for index, entry in enumerate(["first", "second", "third", "fourth"]):
             draw_average_node_output(
@@ -290,7 +300,7 @@ def run_rnn(
                 cycle_delay_range[1],
                 np.array(inputs),
                 all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-                os.path.join(visualize, f"node_outputs_{entry}"),
+                posixpath.join(visualize, f"node_outputs_{entry}"),
                 trials,
                 custom_range=[index, index + 3],
                 end_tests=end_tests,
@@ -301,12 +311,20 @@ def run_rnn(
             cycle_delay_range[1],
             np.array(inputs),
             all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-            os.path.join(visualize, "foreperiod_output_growth"),
+            posixpath.join(visualize, "foreperiod_output_growth"),
             trials,
             include_previous=True,
             only_last_of_previous=True,
             delay_buckets=True,
             end_tests=end_tests,
+        )
+        process_output(
+            cycle_len,
+            cycle_delay_range[1],
+            all_outputs,
+            trials,
+            end_tests=end_tests,
+            filename=posixpath.join(visualize, "processed_output"),
         )
     # print(f"{key=} - {np.mean(network_fitness)=}")
     return np.mean(network_fitness)
@@ -454,9 +472,7 @@ if __name__ == "__main__":
     if "c:" in folder_name.lower():
         save_dir = folder_name
     else:
-        save_dir = os.path.join(
-            args.base_folder, folder_name
-        )
+        save_dir = posixpath.join(args.base_folder, folder_name)
     similar_run = 0
     if os.path.exists(save_dir) and bool(literal_eval(args.overwrite)):
         with os.scandir(save_dir) as entries:
@@ -471,6 +487,9 @@ if __name__ == "__main__":
             save_dir = save_dir.split("__")[0] + "__" + str(similar_run)
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
+    processed_output_path = posixpath.join(save_dir, "processed_output/")
+    if not os.path.exists(processed_output_path):
+        os.mkdir(processed_output_path)
 
     shutil.copyfile(
         args.config,
@@ -562,14 +581,14 @@ if __name__ == "__main__":
                     lesions[tuple(entry)] = lesion
 
         count += 1
-        network_dir = os.path.join(save_dir, f"network{count}/")
+        network_dir = posixpath.join(save_dir, f"network{count}/")
         if not os.path.exists(network_dir):
             os.mkdir(network_dir)
-        lesions[0] = WINNER
+        lesions["(0)"] = WINNER
         lesion_count = 0
         for lesion, genome in lesions.items():
             # print(lesion)
-            lesion_dir = os.path.join(network_dir, f"{str(lesion)}/")
+            lesion_dir = posixpath.join(network_dir, f"{str(lesion)}/")
             if not os.path.exists(lesion_dir):
                 os.mkdir(lesion_dir)
             # Verify network output against training data.
