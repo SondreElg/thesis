@@ -394,7 +394,7 @@ def run(*, gens, max_trials=1, initial_pop=None):
         if type(initial_pop) == list or initial_pop is None
         else initial_pop
     )
-    pe = neat.ParallelEvaluator(4, _eval_fitness)
+    pe = neat.ParallelEvaluator(12, _eval_fitness)
     species_one = pop.run(pe.evaluate, gens)
 
     all_time_best = pop.reporters.reporters[0].best_genome()

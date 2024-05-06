@@ -2,20 +2,25 @@
 Varying visualisation tools.
 """
 
-import os
-import posixpath
-import pickle
-import warnings
 import math
-import graphviz
-import matplotlib
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import seaborn as sns
-import pandas as pd
+import os
+import pickle
+import posixpath
+import warnings
 from enum import IntEnum
 
+import graphviz
+import matplotlib
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
+import numpy.ma as ma
+import pandas as pd
+import seaborn as sns
+from matplotlib import colors as mcolors
+
+# TODO: Get standard colors from a resonably ordered mcolor dict
+# standard_colors = mcolors.CSS4_COLORS.keys()
 standard_colors = [
     "blue",
     "green",
@@ -40,15 +45,15 @@ standard_colors = [
     "lightpink",
     "lightgray",
     "lightyellow",
-    "lightbrown",
-    "lightolive",
+    # "lightbrown",
+    # "lightolive",
     "lightcyan",
-    "lightlime",
-    "lightteal",
-    "lightlavender",
-    "lightmagenta",
+    # "lightlime",
+    # "lightteal",
+    # "lightlavender",
+    # "lightmagenta",
     "lightsalmon",
-    "lightgold",
+    # "lightgold",
 ]
 
 
@@ -69,6 +74,10 @@ lesion_types = {
 
 
 def _reshape_processed_output(array, shape_order, original_shape_order=[0, 1, 2, 3, 4]):
+    """
+    Reshape array by moving its axes
+    TODO: Add handling for missing axes when using ShapeMap
+    """
     return np.moveaxis(array, original_shape_order, shape_order)
 
 
@@ -95,21 +104,22 @@ def _classify_network_lesion(filepath):
     return min(lesion_type, 3)
 
 
-def plot_tthp_vs_z_score(folder_path, filename):
+def plot_tthp_vs_z_score(folder_path, filename, lesions=False):
     """
     Map the TtHP and Z-score indexes against each other in a plot
     TODO: Color output for each network type
     """
+
+    lesion_title = "_with_lesions" if lesions else ""
 
     file_paths = np.array(
         [
             posixpath.join(root, file).replace("\\", "/")
             for root, _, files in os.walk(folder_path)
             for file in files
-            if ".npy" in file
+            if ".npy" in file and ("(0)" in root if not lesions else True)
         ]
     )
-    # print(file_paths)
     node_output_files = np.array([np.load(path) for path in file_paths])
     lesion_classification = np.array(
         [
@@ -119,12 +129,9 @@ def plot_tthp_vs_z_score(folder_path, filename):
     )
 
     z_scores = np.array([z_score(file) for file in node_output_files])
-    tthps = np.array([tthp_vs_fp(file) for file in node_output_files])
-    fig = plt.figure()
-    ax = plt.gca()
-    # ax.set_yscale("symlog")
-    ax.set_xlabel("Z-score")
-    ax.set_ylabel("TTHP correlation")
+
+    tthps = np.array([tthp(file) for file in node_output_files])
+    tthp_correlation = tthp_correlation_vs_delay(tthps)
 
     markers = ["o", "s", "D", "*"]
     legend_handles = []
@@ -149,54 +156,153 @@ def plot_tthp_vs_z_score(folder_path, filename):
                 label=lesion_types[marker_index],
             )
         )
-    ax.legend(
-        handles=legend_handles,
+
+    plot_tthp_vs_fp(
+        tthps, folder_path, "tthp_vs_fps" + lesion_title, lesion_classification, markers
+    )
+    plot_z_score_vs_fp(
+        z_scores,
+        folder_path,
+        "z_score_vs_fps" + lesion_title,
+        lesion_classification,
+        markers,
     )
 
     # for network in range(len(lesion_classification)):
-    #         ax.scatter(
-    #             z_scores[network, delay_block],
-    #             tthps[network, delay_block],
-    #             marker=markers[lesion_classification[network]],
-    #             color=standard_colors[delay_block],
-    #             alpha=0.5,
-    #         )
+    #     ax.scatter(
+    #         z_scores[network, delay_block],
+    #         tthps[network, delay_block],
+    #         marker=markers[lesion_classification[network]],
+    #         color=standard_colors[delay_block],
+    #         alpha=0.5,
+    #     )
+    # print(z_scores.shape)
+    # print(tthp_correlation.shape)
 
-    for delay_block in range(z_scores.shape[1]):
-        for network in range(len(lesion_classification)):
-            ax.scatter(
-                z_scores[network, delay_block],
-                tthps[network, delay_block],
-                marker=markers[lesion_classification[network]],
-                color=standard_colors[delay_block],
-                alpha=0.5,
-            )
-    plt.savefig(posixpath.join(folder_path, filename), dpi=300)
-
-    # Create subplots in a 3xN grid
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10), sharey=True, sharex=True)
-    axes = axes.flatten()
-    for axis in range(4):
-        if axis % 2 == 0:
-            axes[axis].set_ylabel("TTHP correlation")
-        if axis > 1:
-            axes[axis].set_xlabel("Z-score")
-        axes[axis].legend(
-            handles=legend_handles[: z_scores.shape[1]],
+    fig = plt.figure()
+    ax = plt.gca()
+    # ax.set_yscale("symlog")
+    ax.set_xlabel("Z-score")
+    ax.set_ylabel("TTHP correlation")
+    # ax.legend(
+    #     handles=legend_handles,
+    # )
+    for network in range(len(lesion_classification)):
+        ax.scatter(
+            np.mean(z_scores[network]),
+            np.mean(tthp_correlation[network]),
+            marker=markers[lesion_classification[network]],
+            color=standard_colors[network % len(standard_colors)],
+            alpha=0.5,
         )
-        axes[axis].set_title(lesion_types[axis])
+    plt.savefig(posixpath.join(folder_path, filename + lesion_title), dpi=300)
 
-    for delay_block in range(z_scores.shape[1]):
+    if lesions:
+        # Create subplots in a 3xN grid
+        fig, axes = plt.subplots(2, 2, figsize=(10, 10), sharey=True, sharex=True)
+        axes = axes.flatten()
+        for axis in range(4):
+            if axis % 2 == 0:
+                axes[axis].set_ylabel("TTHP correlation")
+            if axis > 1:
+                axes[axis].set_xlabel("Z-score")
+            axes[axis].legend(
+                handles=legend_handles[: z_scores.shape[1]],
+            )
+            axes[axis].set_title(lesion_types[axis])
+
         for network in range(len(lesion_classification)):
             axes[lesion_classification[network]].scatter(
-                z_scores[network, delay_block],
-                tthps[network, delay_block],
+                np.mean(z_scores[network]),
+                np.mean(tthp_correlation[network]),
                 marker=markers[lesion_classification[network]],
-                color=standard_colors[delay_block],
+                color=standard_colors[network % len(standard_colors)],
                 alpha=0.5,
             )
-    plt.savefig(posixpath.join(folder_path, f"{filename}_split"), dpi=300)
+        plt.savefig(posixpath.join(folder_path, f"{filename}_split"), dpi=300)
     plt.close("all")
+
+
+def plot_tthp_vs_fp(tthps, folder_path, filename, lesion_classification, markers):
+    """
+    Plot the Time To Half-Peaks for each network
+    TODO: Support for lesioned networks
+    """
+    fig, axes = plt.subplots(
+        3, math.ceil(tthps.shape[0] / 3), figsize=(15, 10), sharey=True, sharex=True
+    )
+    axes = axes.flatten()
+    # print(f"tthp_vs_fp {tthps=}")
+    fps = np.arange(1, tthps.shape[2] + 1)
+    for axis in range(tthps.shape[0]):
+        if axis % 4 == 0:
+            axes[axis].set_ylabel("TTHP")
+        # if axis > 1:
+        axes[axis].set_xlabel("Foreperiod")
+        axes[axis].set_title(f"network {axis + 1}")
+    for network_index, network in enumerate(tthps):
+        for delay_index, delay_output in enumerate(network):
+            output = np.nanmedian(delay_output, axis=1)
+            axes[network_index].scatter(
+                fps,
+                output,
+                marker=markers[delay_index],
+                color=standard_colors[delay_index],
+                alpha=0.5,
+            )
+
+    legend_markers = []
+    for marker_index in range(tthps.shape[1]):
+        legend_markers.append(
+            matplotlib.lines.Line2D(
+                [],
+                [],
+                color="black",
+                marker=markers[marker_index % 4],
+                markersize=10,
+                linestyle="",
+                label=f"delay {marker_index}",
+            )
+        )
+
+    axes[-1].legend(
+        handles=legend_markers,
+        # bbox_to_anchor=(0.0, 1.0, 1.0, 0.10),
+        loc=3,
+        ncol=2,
+        mode="expand",
+        borderaxespad=0.0,
+    )
+
+    # for delay_block in range(z_scores.shape[1]):
+    #     for network in range(len(lesion_classification)):
+    plt.savefig(posixpath.join(folder_path, filename), dpi=300)
+
+
+def plot_z_score_vs_fp(z_scores, folder_path, filename, lesion_classification, markers):
+    """
+    Plot the Z-scores of each network
+    TODO: Support for lesioned networks
+    """
+    fig, axes = plt.subplots(
+        3, math.ceil(z_scores.shape[0] / 3), figsize=(15, 10), sharey=True, sharex=True
+    )
+    axes = axes.flatten()
+    fps = np.arange(1, z_scores.shape[1] + 1)
+    for axis in range(z_scores.shape[0]):
+        if axis % 4 == 0:
+            axes[axis].set_ylabel("Z-score")
+        axes[axis].set_xlabel("Foreperiod")
+        axes[axis].set_title(f"network {axis + 1}")
+    for output_index, output in enumerate(z_scores):
+        axes[output_index].scatter(
+            fps,
+            output,
+            # marker=markers[delay_index],
+            # color=standard_colors[delay_index],
+            alpha=0.5,
+        )
+    plt.savefig(posixpath.join(folder_path, filename), dpi=300)
 
 
 def x_given_y(x1, x2, y1, y2, y):
@@ -209,7 +315,29 @@ def x_given_y(x1, x2, y1, y2, y):
     return (y - b) / m
 
 
-def tthp_vs_fp(node_outputs):
+def tthp_correlation_vs_delay(tthps):
+    # print(tthps.shape)
+    # tthp_means = [np.mean(net_tthps) for net_tthps in tthps]
+    # valid_tthps = tthps[~np.isnan(tthps)]
+    # print(valid_tthps.shape)
+    # print(valid_tthps)
+    tthp_corrs = np.empty(tthps.shape[:2])
+    indices = np.arange(1, tthps.shape[2] + 1)
+    for network_index, network in enumerate(tthps):
+        for delay_index, delay_block in enumerate(network):
+            tthp_corrs[network_index, delay_index] = np.corrcoef(
+                np.nanmean(delay_block, axis=1), indices
+            )[0, 1]
+            # for fp_index, _ in enumerate(delay_block):
+            # tthps_means = np.nanmean(delay_block, axis=1)
+            # tthp_corrs[network_index, delay_index, fp_index] = np.corrcoef(
+            #     valid_tthps[network_index, delay_index, fp_index], indices
+            # )[0, 1]
+    # print(tthp_corrs)
+    return tthp_corrs
+
+
+def tthp(node_outputs):
     """
     Calculate Time-to-Half-Peak for each FP and return the correlation coefficient across trials as output
     Split output across delay timings
@@ -228,67 +356,85 @@ def tthp_vs_fp(node_outputs):
         ],
     )
     output_array = output_array[2]
-    tthp = np.empty(output_array.shape[:2])
+    tthp = np.empty(output_array.shape[:3]) * np.nan
     for delay_index, delay_block in enumerate(output_array):
         for fp_index, fp_block in enumerate(delay_block):
-            fp_max_indices = np.argmax(fp_block, axis=1) - 1
-            fp_half_peaks = np.empty_like(fp_max_indices)
-            fp_peaks = fp_block[:, fp_index + 1]  # Do I even need flatten?
+            # fp_max_indices = np.argmax(fp_block, axis=1) - 1
+            # fp_half_peaks = np.empty_like(fp_max_indices, dtype=float)
+            # fp_peaks = fp_block[:, fp_index + 1]  # Do I even need flatten?
+            fp_half_peaks = (
+                fp_block[:, 0] + (fp_block[:, fp_index + 1] - fp_block[:, 0]) / 2
+            )
+            # print(fp_half_peaks.shape)
             for trial_index, trial in enumerate(fp_block):
+                fp_half_peak = math.nan
                 trial = trial[: len(trial) // 2]
                 start_val = trial[0]
-                if math.isnan(start_val):
-                    fp_peaks[trial_index] = np.nan
+                # if math.isnan(start_val):
+                #     fp_peaks[trial_index] = np.nan
+                #     continue
+                # diff_val = fp_peaks[trial_index] - start_val
+                # if diff_val <= 0:
+                #     fp_peaks[trial_index] = np.nan
+                #     continue
+                # half_peak_val = start_val + diff_val / 2
+                # print(fp_half_peaks[trial_index])
+                if fp_half_peaks[trial_index] < 0 or math.isnan(
+                    fp_half_peaks[trial_index]
+                ):
                     continue
-                diff_val = fp_peaks[trial_index] - start_val
-                if diff_val <= 0:
-                    fp_peaks[trial_index] = np.nan
-                    continue
-                half_peak_val = start_val + diff_val / 2
                 prev_output = start_val
                 for output_index, output in enumerate(trial[1:]):
-                    if output >= half_peak_val:
-                        fp_half_peaks[trial_index] = x_given_y(
+                    if output >= fp_half_peaks[trial_index]:
+                        fp_half_peak = x_given_y(
                             output_index,
                             output_index + 1,
                             prev_output,
                             output,
-                            half_peak_val,
+                            fp_half_peaks[trial_index],
                         )
+                        # print(f"{fp_half_peak=}")
                         break
                     prev_output = output
-            tthp[delay_index, fp_index] = np.corrcoef(fp_half_peaks, fp_max_indices)[
-                0, 1
-            ]
-    # print(tthp.shape)
-    return np.median(tthp, axis=1)
+                # print(np.nanmedian(fp_half_peaks))
+                tthp[delay_index, fp_index, trial_index] = fp_half_peak
+    # print(tthp)
+    return tthp
 
 
 def z_score(node_outputs):
     """
     Calculate the Z-score for each FP and return the median as output
     """
-    output_array = _reshape_processed_output(
+    temp = _reshape_processed_output(
         node_outputs,
         [
             ShapeMap.node_count,
             ShapeMap.delay_block,
-            ShapeMap.foreperiod_blocks,
             ShapeMap.trials,
+            ShapeMap.foreperiod_blocks,
             ShapeMap.max_trial_len,
         ],
     )[2]
-    z_scores = np.empty(output_array.shape[:2])
-    for delay_index, delay_block in enumerate(output_array):
-        for fp_index, fp_block in enumerate(delay_block):
-            fp_std = np.nanstd(fp_block)
-            fp_maxes = np.nanmax(fp_block, axis=1)
-            mask = ~np.isnan(fp_maxes)
-            fp_maxes = fp_maxes[mask]
-            fp_max_max = np.max(fp_maxes)
-            fp_max_mean = np.mean(fp_maxes)
-            z_scores[delay_index, fp_index] = (fp_max_max - fp_max_mean) / fp_std
-    return np.median(z_scores, axis=1)
+    output_array = np.swapaxes(
+        np.concatenate([*temp]),
+        0,
+        1,
+    )[:, :, : temp.shape[-1] // 2]
+    # print(node_outputs.shape)
+    # print(temper.shape)
+    # print(temp.shape)
+    # print(output_array.shape)
+    z_scores = np.empty(output_array.shape[0])
+    for fp_index, fp_block in enumerate(output_array):
+        fp_maxes = np.nanmax(fp_block, axis=1)
+        mask = ~np.isnan(fp_maxes)
+        fp_maxes = fp_maxes[mask]
+        fp_std = np.nanstd(fp_maxes)
+        fp_max_max = np.max(fp_maxes)
+        fp_max_mean = np.mean(fp_maxes)
+        z_scores[fp_index] = (fp_max_max - fp_max_mean) / fp_std
+    return z_scores
 
 
 def process_output(
@@ -1066,8 +1212,6 @@ def draw_average_node_output(
                     )
                 )
             for i in range(len(block_indices) - 2):
-                # print(f"{block_indices[i]}:{block_indices[i+1]}")
-
                 if only_last_of_previous:
                     first_half = node_outputs[block_indices[i]]
                 else:
@@ -1093,7 +1237,6 @@ def draw_average_node_output(
                     ),
                     constant_values=(np.nan,),
                 )
-                # print(delay_split)
                 delay_first = (
                     block_indices[i + 1] - block_indices[i] - (max_foreperiod + 1)
                 )
@@ -1106,11 +1249,6 @@ def draw_average_node_output(
                 label=block + 1,
             )
             if not only_last:
-                # print(
-                #     node_names[node] if node in node_names else f"Node {node}",
-                #     "block ",
-                #     block,
-                # )
                 delay = 0
                 for delayed_block in delay_split:
                     averages = np.nanmean(delayed_block[block], axis=0)
@@ -1127,13 +1265,6 @@ def draw_average_node_output(
                         ),
                         axis=None,
                     )
-                    # print(mask, "len", len(mask))
-                    # print(dim[mask])
-                    # print(latest_plot)
-                    # print("delay: ", delay, averages)
-                    # print(averages)
-                    # print("delay index", -(cycle_delay_max - delay))
-                    # print(cycle_len - (cycle_delay_max - delay))
                     axes[idx].plot(
                         dim[mask],
                         averages[mask],
@@ -1144,27 +1275,6 @@ def draw_average_node_output(
                         color=latest_plot[0].get_color(),
                         alpha=0.7,
                     )
-                    # if delay < len(delay_split) - 1:
-                    #     axes[idx].hlines(
-                    #         xmin=-(cycle_delay_max - delay),
-                    #         xmax=-1,
-                    #         y=averages[cycle_len - (cycle_delay_max - delay)],
-                    #         color=latest_plot[0].get_color(),
-                    #         linewidth=0.5,
-                    #         linestyle="--",
-                    #         zorder=-1,
-                    #         clip_on=False,
-                    #     )
-                    #     axes[idx].hlines(
-                    #         xmin=cycle_len - delay - 1,
-                    #         xmax=cycle_len - 1,
-                    #         y=averages[len(dim) - delay - 1],
-                    #         color=latest_plot[0].get_color(),
-                    #         linewidth=0.5,
-                    #         linestyle="--",
-                    #         zorder=-1,
-                    #         clip_on=False,
-                    #     )
                     delay += 1
         axes[idx].legend(loc="upper right")
 
@@ -2417,13 +2527,12 @@ def network_output_matrix(
     # indices = np.empty((len(all_outputs)), dtype=object)
     for idx, block in enumerate(all_outputs):
         fp = foreperiods[idx]
-        prev_delay = 0
-        trial = 0
+        prev_delay = -1
         node_outputs = np.array([entry[-1] for entry in block], dtype=float)
         block_indices = np.append(
             np.asarray(np.where(node_outputs == 1))[0], len(node_outputs)
         )
-        for entry in block:
+        for trial, entry in enumerate(block):
             df.loc[len(df.index)] = [
                 network,
                 fp,
@@ -2432,8 +2541,11 @@ def network_output_matrix(
                 foreperiods,
                 *entry.values(),
             ]
-            prev_delay = (
-                block_indices[trial + 1] - block_indices[trial] - (max_foreperiod + 1)
-            )
+            if trial < len(block):
+                prev_delay = (
+                    block_indices[trial + 1]
+                    - block_indices[trial]
+                    - (max_foreperiod + 1)
+                )
 
     df.to_csv(f"{filename}.csv")

@@ -40,8 +40,8 @@ def extract_args_from_string(filename):
 config = None
 population = None
 args = None
-root = "c:/Users/Sondr/pureples/experiments/rg/temper"
-target_base = "c:/Users/Sondr/pureples/experiments/rg/meetings/04-24"
+root = "c:/Users/Sondr/pureples/experiments/rg/50plus_networks"
+target_base = "c:/Users/Sondr/pureples/experiments/rg/meetings/05-07"
 target_folder = None
 
 dir_entries = os.listdir(root)
@@ -59,7 +59,7 @@ for folder in [
             arguments = os.path.join(root, folder, file).replace("\\", "/")
     args = extract_args_from_string(arguments)
     args["gens"] = 0
-    args["log_level"] = -1
+    args["log_level"] = 1
     args["config"] = config
     args["load"] = population
     args["target_folder"] = target_folder
