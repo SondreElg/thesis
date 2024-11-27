@@ -10,8 +10,16 @@ from pureples.shared.visualize import plot_tthp_vs_z_score
 #     "tthp_correlation_vs_z_score",
 # )
 
+
 plot_tthp_vs_z_score(
-    "C:/Users/Sondr/pureples/experiments/rg/meetings/05-07/",
+    "C:/Users/Sondr/pureples/experiments/rg/meetings/05-07/foreperiod-rnn-positive-static_magnitude-hebbian-20-threshold-real_weight-no-reset2_hidden_nodes-01-09",
     "tthp_correlation_vs_z_score",
     # True,
 )
+
+
+# plot_tthp_vs_z_score(
+#     "C:/Users/Sondr/pureples/experiments/rg/meetings/05-07-v2/",
+#     "tthp_correlation_vs_z_score",
+#     # True,
+# )

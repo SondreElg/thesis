@@ -5,7 +5,6 @@ Fitness threshold set in config
 """
 
 import copy
-import sys
 import os
 import posixpath
 import pickle
@@ -13,7 +12,6 @@ import math
 import argparse
 import neat
 import neat.nn
-import multiprocessing
 import json
 import numpy as np
 import shutil
@@ -42,7 +40,6 @@ from pureples.shared.population_plus import Population
 from pureples.shared.hebbian_rnn import HebbianRecurrentNetwork
 from pureples.shared.hebbian_rnn_plus import HebbianRecurrentDecayingNetwork
 from pureples.shared.distributions import bimodal
-from pureples.shared.IZNodeGene_plus import IZNN, IZGenome
 
 np.random.seed(0)
 
@@ -77,10 +74,15 @@ parser.add_argument("--flip_pad_data", default="True")
 parser.add_argument("--trial_delay_range", default="[0, 3]")
 parser.add_argument("--log_level", default="0", choices=["-1", "0", "1", "2", "3", "4"])
 parser.add_argument("--lesion", default="False")
+parser.add_argument("--weight_variants", default="0")
+parser.add_argument("--log_populations", default="10")
 args = parser.parse_args()
 
 args.reset = bool(literal_eval(args.reset))
 args.binary_weights = bool(literal_eval(args.binary_weights))
+args.weight_variants = int(args.weight_variants)
+args.log_populations = int(args.log_populations)
+args.hebbian_learning_rate = float(args.hebbian_learning_rate)
 
 log_level = int(args.log_level)
 
@@ -167,7 +169,9 @@ def run_rnn(
             if training == 0:
                 network = copy.deepcopy(net)
 
-            output = network.activate([ready, go], training)
+            output = network.activate(
+                [ready, go], training and args.hebbian_learning_rate
+            )
 
             last_fitness = 1 - abs(output[0] - expected_output[index]) ** 2
             outputs[index] = output[0]
@@ -306,17 +310,13 @@ def run_rnn(
                 end_tests=end_tests,
             )
     if log_level == -1:
-        draw_foreperiod_adaptation(
-            cycle_len,
-            cycle_delay_range[1],
-            np.array(inputs),
-            all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
-            posixpath.join(visualize, "foreperiod_output_growth"),
-            trials,
-            include_previous=True,
-            only_last_of_previous=True,
-            delay_buckets=True,
-            end_tests=end_tests,
+        network_output_matrix(
+            network_input=np.array(inputs),
+            all_outputs=all_outputs[np.argsort(foreperiods[:blocks_of_interest])],
+            filename=posixpath.join(visualize, "network_output_matrix"),
+            foreperiods=foreperiods[np.argsort(foreperiods[:blocks_of_interest])],
+            cycle_len=cycle_len,
+            cycle_delay_max=cycle_delay_range[1],
         )
         process_output(
             cycle_len,
@@ -517,7 +517,7 @@ if __name__ == "__main__":
         winner = result[2]  # All-time best
         print("\nBest genome:\n{!s}".format(winner))
 
-        WINNERS = extract_winning_species(result[0][2], winner)
+        WINNERS = extract_winning_species(result[0][2], winner, args.log_populations)
 
     test_set = (
         result[0][1]
@@ -544,25 +544,22 @@ if __name__ == "__main__":
 
     count = 0
     for WINNER in WINNERS.values():
-        lesions = {}
+        variants = {}
         if bool(literal_eval(args.lesion)):
             WINNER = WINNER.get_pruned_copy(CONFIG.genome_config)
             lesion_list = []
             print(WINNER.connections)
             print("###########################")
-            for cg in WINNER.connections.values():
+            for cg in WINNER.connections.values():  # TODO: remove this step/lesion_list
                 input_key, output_key = cg.key
-                if input_key >= 0 and output_key > 0 and input_key != output_key:
-                    lesion_list.append(cg.key)
+                lesion_list.append(cg.key)
 
             combined_list = []
             for r in range(1, len(lesion_list) + 1):
-                # print(f"{combinations(lesion_list, r)=}")
-                combined_list.extend(combinations(lesion_list, r))
-            # print(lesion_list)
-            # print(combined_list)
+                combined_list.extend(
+                    combinations(lesion_list, r)
+                )  # TODO: replace 1 with r again
             combined_list = [list(comb) for comb in combined_list]
-            # print(combined_list)
             for entry in combined_list:
                 target = True
                 lesion = copy.deepcopy(WINNER)
@@ -580,14 +577,44 @@ if __name__ == "__main__":
                 if target:
                     lesions[tuple(entry)] = lesion
 
+        if args.weight_variants:
+            WINNER = WINNER.get_pruned_copy(CONFIG.genome_config)
+            print(WINNER.connections)
+            print("###########################")
+            for variant in range(0, args.weight_variants):  # Weight variants of biases
+                for node_key in WINNER.nodes.keys():
+                    if node_key >= 0:
+                        adjusted_variant = copy.deepcopy(WINNER)
+                        weight_scaling = 0
+                        if variant < 4:
+                            weight_scaling = variant / 4
+                        else:
+                            weight_scaling = (2 ** (variant - 2) - 1) / 2 ** (
+                                variant - 2
+                            )
+
+                        adjusted_variant.nodes[node_key].bias *= weight_scaling
+                        variants[f"({node_key}) {weight_scaling:.3f}"] = (
+                            adjusted_variant
+                        )
+                for cg in WINNER.connections.values():  # Weight variants of connections
+                    adjusted_variant = copy.deepcopy(WINNER)
+                    weight_scaling = 0
+                    if variant < 4:
+                        weight_scaling = variant / 4
+                    else:
+                        weight_scaling = (2 ** (variant - 2) - 1) / 2 ** (variant - 2)
+
+                    adjusted_variant.connections[cg.key].weight *= weight_scaling
+                    variants[f"{tuple(cg.key)} {weight_scaling:.3f}"] = adjusted_variant
+
         count += 1
         network_dir = posixpath.join(save_dir, f"network{count}/")
         if not os.path.exists(network_dir):
             os.mkdir(network_dir)
-        lesions["(0)"] = WINNER
+        variants["original"] = WINNER
         lesion_count = 0
-        for lesion, genome in lesions.items():
-            # print(lesion)
+        for lesion, genome in variants.items():
             lesion_dir = posixpath.join(network_dir, f"{str(lesion)}/")
             if not os.path.exists(lesion_dir):
                 os.mkdir(lesion_dir)

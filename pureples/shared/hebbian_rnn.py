@@ -92,12 +92,6 @@ class HebbianRecurrentNetwork(object):
                         ) * self.hebbian_buffer[node][i] + learning_rate * (
                             update_factor * input_val * output_val
                         )
-                    # else:
-                    #     self.hebbian_buffer[node][i] = (
-                    #         1 - learning_rate
-                    #     ) * self.hebbian_buffer[node][i] - learning_rate * (
-                    #         update_factor * input_val * output_val
-                    #     )
                     if apply:
                         h = max(
                             min(
